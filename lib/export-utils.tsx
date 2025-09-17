@@ -9,7 +9,7 @@ export class DiagramExporter {
     format: "png" | "svg" | "jpg" = "png",
   ): Promise<Blob> {
     try {
-      console.log("[v0] Starting export with format:", format)
+      console.log("[app] Starting export with format:", format)
 
       if (format === "svg") {
         return this.exportAsSVG(element, classes, relationships)
