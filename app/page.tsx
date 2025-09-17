@@ -55,23 +55,53 @@ export default function HomePage() {
     setHistory(getDiagramHistory())
   }, [])
 
-  const handleNewDiagram = () => {
-    const newId = Math.random().toString(36).substring(2, 15)
-    setDiagramId(newId)
-    setClasses([])
-    setRelationships([])
-    saveDiagramToHistory(newId)
-    setHistory(getDiagramHistory())
-    router.push(`/diagram/${newId}`)
+
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/app/diagrams"
+  const handleNewDiagram = async () => {
+    // Crear diagrama en backend
+    try {
+      const res = await fetch(`${BACKEND_URL}/diagrams/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "Nuevo Diagrama", description: "", is_public: false, classes: [], relationships: [] }),
+      })
+      if (!res.ok) throw new Error("No se pudo crear el diagrama")
+      const data = await res.json()
+      const newId = data.id
+      setDiagramId(newId)
+      setClasses([])
+      setRelationships([])
+      saveDiagramToHistory(newId)
+      setHistory(getDiagramHistory())
+      router.push(`/diagram/${newId}`)
+    } catch (e) {
+      alert("Error creando diagrama: " + e)
+    }
   }
 
-  const handleContinueDiagram = (id?: string) => {
-  // Si se pasa un id, redirige a ese, si no, usa el último o crea uno nuevo
-    const targetId = id || history[0] || Math.random().toString(36).substring(2, 15)
-    setDiagramId(targetId)
-    saveDiagramToHistory(targetId)
-    setHistory(getDiagramHistory())
-    router.push(`/diagram/${targetId}`)
+
+  const handleContinueDiagram = async (id?: string) => {
+    // Si se pasa un id, redirige a ese, si no, usa el último o crea uno nuevo
+    let targetId = id || history[0]
+    if (!targetId) {
+      await handleNewDiagram()
+      return
+    }
+    // Verificar si existe en backend
+    try {
+      const res = await fetch(`${BACKEND_URL}/diagrams/${targetId}/`)
+      if (res.status === 404) {
+        // Si no existe, crearlo
+        await handleNewDiagram()
+        return
+      }
+      setDiagramId(targetId)
+      saveDiagramToHistory(targetId)
+      setHistory(getDiagramHistory())
+      router.push(`/diagram/${targetId}`)
+    } catch (e) {
+      alert("Error accediendo al diagrama: " + e)
+    }
   }
 
   const handleClassesChange = useCallback(

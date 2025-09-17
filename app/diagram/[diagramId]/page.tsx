@@ -16,12 +16,18 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
   const [relationships, setRelationships] = useState<RelationshipData[]>([])
   const [userId] = useState(() => `user-${Math.random().toString(36).substring(2, 15)}`)
   const [userName] = useState(() => `Usuario ${Math.floor(Math.random() * 1000)}`)
+  const [notFound, setNotFound] = useState(false)
 
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/app/diagrams"
   // Cargar diagrama desde el backend al montar
   useEffect(() => {
     async function fetchDiagram() {
       try {
-        const res = await fetch(`/api/app/diagrams/diagrams/${diagramId}/`)
+        const res = await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`)
+        if (res.status === 404) {
+          setNotFound(true)
+          return
+        }
         if (!res.ok) return
         const data = await res.json()
         setClasses(
@@ -66,7 +72,7 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
     if (classes.length === 0 && relationships.length === 0) return
     const save = async () => {
       try {
-        await fetch(`/api/app/diagrams/diagrams/${diagramId}/`, {
+        await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -121,6 +127,16 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
 
   const handleAIAction = (action: any) => {
   // Puedes copiar la lógica de IA de la página principal si lo deseas
+  }
+
+  if (notFound) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <h1 className="text-2xl font-bold mb-4">Diagrama no encontrado</h1>
+        <p className="mb-4">El diagrama solicitado no existe o fue eliminado.</p>
+        <Button onClick={() => window.location.href = "/"}>Volver al inicio</Button>
+      </div>
+    )
   }
 
   return (
