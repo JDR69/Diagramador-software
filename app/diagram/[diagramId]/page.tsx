@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
 import { AIChat } from "@/components/ai/ai-chat"
@@ -17,6 +17,38 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
   const [userId] = useState(() => `user-${Math.random().toString(36).substring(2, 15)}`)
   const [userName] = useState(() => `Usuario ${Math.floor(Math.random() * 1000)}`)
 
+  // Cargar diagrama desde el backend al montar
+  useEffect(() => {
+    async function fetchDiagram() {
+      try {
+        const res = await fetch(`/api/app/diagrams/diagrams/${diagramId}/`)
+        if (!res.ok) return
+        const data = await res.json()
+        setClasses(
+          (data.classes || []).map((cls: any) => ({
+            id: cls.id,
+            name: cls.name,
+            attributes: (cls.attributes || []).map((a: any) => a.name),
+            position: cls.position || { x: 0, y: 0 },
+          }))
+        )
+        setRelationships(
+          (data.relationships || []).map((rel: any) => ({
+            id: rel.id,
+            from: rel.from_class,
+            to: rel.to_class,
+            type: rel.relationship_type,
+            cardinality: rel.cardinality,
+            name: rel.name || ""
+          }))
+        )
+      } catch (e) {
+        console.error("Error cargando diagrama:", e)
+      }
+    }
+    fetchDiagram()
+  }, [diagramId])
+
   const { collaborators, isConnected, broadcastClassUpdate, broadcastRelationshipUpdate, broadcastCursorMove } =
     useCollaboration({
       diagramId,
@@ -25,6 +57,41 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
       onClassesChange: setClasses,
       onRelationshipsChange: setRelationships,
     })
+
+
+  // Guardar automáticamente en el backend cuando cambian clases o relaciones
+  useEffect(() => {
+    if (!diagramId) return
+    // No guardar si ambos están vacíos (diagrama nuevo)
+    if (classes.length === 0 && relationships.length === 0) return
+    const save = async () => {
+      try {
+        await fetch(`/api/app/diagrams/diagrams/${diagramId}/`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            classes: classes.map(cls => ({
+              id: cls.id,
+              name: cls.name,
+              attributes: cls.attributes,
+              position: cls.position,
+            })),
+            relationships: relationships.map(rel => ({
+              id: rel.id,
+              from: rel.from,
+              to: rel.to,
+              type: rel.type,
+              cardinality: rel.cardinality,
+              name: rel.name,
+            })),
+          }),
+        })
+      } catch (e) {
+        console.error("Error guardando diagrama:", e)
+      }
+    }
+    save()
+  }, [diagramId, classes, relationships])
 
   const handleClassesChange = useCallback(
     (newClasses: ClassData[]) => {

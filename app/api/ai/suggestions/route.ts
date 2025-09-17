@@ -40,13 +40,13 @@ export async function POST(request: NextRequest) {
 
     const cached = suggestionCache.get(cacheKey)
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      console.log("[v0] Returning cached suggestions for:", className)
+      console.log("[App] Returning cached suggestions for:", className)
       return NextResponse.json({ suggestions: cached.suggestions })
     }
 
     const now = Date.now()
     if (now - lastApiCall < RATE_LIMIT_DELAY) {
-      console.log("[v0] Rate limited, using fallback suggestions for:", className)
+      console.log("[App] Rate limited, using fallback suggestions for:", className)
       const fallback = getFallbackSuggestions(className)
       suggestionCache.set(cacheKey, { suggestions: fallback, timestamp: now })
       return NextResponse.json({ suggestions: fallback })
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
         throw new Error("No valid suggestions generated")
       }
     } catch (apiError: any) {
-      console.log("[v0] API error, using fallback:", apiError.message)
+      console.log("[App] API error, using fallback:", apiError.message)
 
       const fallback = getFallbackSuggestions(className)
       suggestionCache.set(cacheKey, { suggestions: fallback, timestamp: now })
