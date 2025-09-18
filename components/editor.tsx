@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
 import { AIChat } from "@/components/ai/ai-chat"
 import { ExportPanel } from "@/components/export/export-panel"
-import { CollaborationPanel } from "@/components/collaboration/collaboration-panel"
-import { CursorOverlay } from "@/components/collaboration/cursor-overlay"
-import { useCollaboration } from "@/hooks/use-collaboration"
+import { CollaborationPanel } from "@/components/colaborativo/colaborativo-panel"
+import { CursorOverlay } from "@/components/colaborativo/cursor"
+import { useCollaboration } from "@/hooks/use-colaborativo"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 interface EditorProps {

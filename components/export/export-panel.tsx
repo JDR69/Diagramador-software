@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Download, FileImage, FileText, Package, Database } from "lucide-react"
-import { DiagramExporter } from "@/lib/export-utils"
+import { DiagramExporter } from "@/app/lib/export-utils"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 interface ExportPanelProps {

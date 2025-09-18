@@ -5,9 +5,9 @@ import React from "react"
 import { useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { ClassNode } from "./class-node"
-import { RelationshipLine } from "./relationship-line"
-import { CanvasToolbar } from "./canvas-toolbar"
+import { ClassNode } from "./class"
+import { RelationshipLine } from "./relacion-canvas"
+import { CanvasToolbar } from "./menu-canvas"
 import { Plus } from "lucide-react"
 
 interface DiagramCanvasProps {

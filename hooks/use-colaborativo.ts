@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
-import { CollaborationWebSocket } from "@/lib/websocket"
+import { CollaborationWebSocket } from "@/app/lib/websocket"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 interface Collaborator {
