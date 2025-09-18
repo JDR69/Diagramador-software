@@ -1,6 +1,7 @@
 "use client"
 
-/*import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
 import { AIChat } from "@/components/ai/ai-chat"
@@ -10,15 +11,17 @@ import { CursorOverlay } from "@/components/collaboration/cursor-overlay"
 import { useCollaboration } from "@/hooks/use-collaboration"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
-export default function DiagramPage({ params }: { params: { diagramId: string } }) {
-  const { diagramId } = params
+export default function DiagramPage() {
+  const params = useParams();
+  const diagramId = typeof params.diagramId === "string" ? params.diagramId : Array.isArray(params.diagramId) ? params.diagramId[0] : ""
+  const router = useRouter();
   const [classes, setClasses] = useState<ClassData[]>([])
   const [relationships, setRelationships] = useState<RelationshipData[]>([])
   const [userId] = useState(() => `user-${Math.random().toString(36).substring(2, 15)}`)
   const [userName] = useState(() => `Usuario ${Math.floor(Math.random() * 1000)}`)
   const [notFound, setNotFound] = useState(false)
-
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/app/diagrams"
+
   // Cargar diagrama desde el backend al montar
   useEffect(() => {
     async function fetchDiagram() {
@@ -52,7 +55,7 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
         console.error("Error cargando diagrama:", e)
       }
     }
-    fetchDiagram()
+    if (diagramId) fetchDiagram()
   }, [diagramId])
 
   const { collaborators, isConnected, broadcastClassUpdate, broadcastRelationshipUpdate, broadcastCursorMove } =
@@ -64,11 +67,9 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
       onRelationshipsChange: setRelationships,
     })
 
-
   // Guardar automáticamente en el backend cuando cambian clases o relaciones
   useEffect(() => {
     if (!diagramId) return
-    // No guardar si ambos están vacíos (diagrama nuevo)
     if (classes.length === 0 && relationships.length === 0) return
     const save = async () => {
       try {
@@ -126,7 +127,7 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
   )
 
   const handleAIAction = (action: any) => {
-  // Puedes copiar la lógica de IA de la página principal si lo deseas
+    // Puedes copiar la lógica de IA de la página principal si lo deseas
   }
 
   if (notFound) {
@@ -134,7 +135,7 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
       <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
         <h1 className="text-2xl font-bold mb-4">Diagrama no encontrado</h1>
         <p className="mb-4">El diagrama solicitado no existe o fue eliminado.</p>
-        <Button onClick={() => window.location.href = "/"}>Volver al inicio</Button>
+        <Button onClick={() => router.push("/")}>Volver al inicio</Button>
       </div>
     )
   }
@@ -169,4 +170,3 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
     </div>
   )
 }
-*/
