@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+/*import { useState, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
 import { AIChat } from "@/components/ai/ai-chat"
@@ -169,3 +169,4 @@ export default function DiagramPage({ params }: { params: { diagramId: string } 
     </div>
   )
 }
+*/
