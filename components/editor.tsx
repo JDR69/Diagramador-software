@@ -19,6 +19,7 @@ interface EditorProps {
 }
 
 export default function Editor({ diagramId, onBack, onNotFound, mode = "edit" }: EditorProps) {
+	const [showAIChat, setShowAIChat] = useState(true)
 	const router = useRouter()
 	const [classes, setClasses] = useState<ClassData[]>([])
 	const [relationships, setRelationships] = useState<RelationshipData[]>([])
@@ -67,37 +68,37 @@ export default function Editor({ diagramId, onBack, onNotFound, mode = "edit" }:
 	}, [diagramId, mode])
 
 	// Guardar automáticamente en el backend cuando cambian clases o relaciones (solo si editando)
-	useEffect(() => {
-		if (!diagramId || mode === "new") return
-		if (classes.length === 0 && relationships.length === 0) return
-		const save = async () => {
-			try {
-				await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {
-					method: "PATCH",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						classes: classes.map(cls => ({
-							id: cls.id,
-							name: cls.name,
-							attributes: cls.attributes,
-							position: cls.position,
-						})),
-						relationships: relationships.map(rel => ({
-							id: rel.id,
-							from: rel.from,
-							to: rel.to,
-							type: rel.type,
-							cardinality: rel.cardinality,
-							name: rel.name,
-						})),
-					}),
-				})
-			} catch (e) {
-				console.error("Error guardando diagrama:", e)
+		useEffect(() => {
+			if (!diagramId || mode === "new") return
+			// Guardar SIEMPRE aunque estén vacíos
+			const save = async () => {
+				try {
+					await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({
+							classes: classes.map(cls => ({
+								id: cls.id,
+								name: cls.name,
+								attributes: cls.attributes,
+								position: cls.position,
+							})),
+							relationships: relationships.map(rel => ({
+								id: rel.id,
+								from: rel.from,
+								to: rel.to,
+								type: rel.type,
+								cardinality: rel.cardinality,
+								name: rel.name,
+							})),
+						}),
+					})
+				} catch (e) {
+					console.error("Error guardando diagrama:", e)
+				}
 			}
-		}
-		save()
-	}, [diagramId, classes, relationships, mode])
+			save()
+		}, [diagramId, classes, relationships, mode])
 
 		const { collaborators, isConnected, broadcastClassUpdate, broadcastRelationshipUpdate, broadcastCursorMove } =
 			useCollaboration({
@@ -148,33 +149,38 @@ export default function Editor({ diagramId, onBack, onNotFound, mode = "edit" }:
 		)
 	}
 
-	return (
-		<div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900" onMouseMove={handleMouseMove}>
-			<header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-				<div className="flex items-center gap-4">
-					<h1 className="text-lg font-semibold">Diagrama de Clases</h1>
-					{diagramId && <span className="text-sm text-gray-500 dark:text-gray-400">ID: {diagramId}</span>}
-				</div>
-				<div className="flex items-center gap-2 mt-2">
-					  <CollaborationPanel diagramId={diagramId ?? null} collaborators={collaborators} isConnected={isConnected} />
-					<ExportPanel classes={classes} relationships={relationships} />
-				</div>
-			</header>
-			<div className="flex-1 flex relative">
-				<div className="flex-1 relative">
-								<DiagramCanvas
-									diagramId={diagramId ?? null}
-									classes={classes}
-									relationships={relationships}
-									onClassesChange={handleClassesChange}
-									onRelationshipsChange={handleRelationshipsChange}
-								/>
-					<CursorOverlay collaborators={collaborators} />
-				</div>
-				<div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-					  <AIChat diagramId={diagramId ?? null} onAIAction={handleAIAction} />
+		return (
+			<div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900" onMouseMove={handleMouseMove}>
+				<header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+					<div className="flex items-center gap-4">
+						<h1 className="text-lg font-semibold">Diagrama de Clases</h1>
+						{diagramId && <span className="text-sm text-gray-500 dark:text-gray-400">ID: {diagramId}</span>}
+					</div>
+					<div className="flex items-center gap-2 mt-2">
+						<CollaborationPanel diagramId={diagramId ?? null} collaborators={collaborators} isConnected={isConnected} />
+						<ExportPanel classes={classes} relationships={relationships} />
+						<Button variant="secondary" size="sm" onClick={() => setShowAIChat((v) => !v)}>
+							{showAIChat ? "Ocultar IA" : "Mostrar IA"}
+						</Button>
+					</div>
+				</header>
+				<div className="flex-1 flex relative">
+					<div className="flex-1 relative">
+						<DiagramCanvas
+							diagramId={diagramId ?? null}
+							classes={classes}
+							relationships={relationships}
+							onClassesChange={handleClassesChange}
+							onRelationshipsChange={handleRelationshipsChange}
+						/>
+						<CursorOverlay collaborators={collaborators} />
+					</div>
+					{showAIChat && (
+						<div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+							<AIChat diagramId={diagramId ?? null} onAIAction={handleAIAction} />
+						</div>
+					)}
 				</div>
 			</div>
-		</div>
-	)
+		)
 }

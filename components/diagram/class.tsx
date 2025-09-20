@@ -117,7 +117,7 @@ export function ClassNode({
 
   const handleNodeClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log("[v0] Node clicked:", data.name, "isConnecting:", isConnecting)
+    console.log(" Node clicked:", data.name, "isConnecting:", isConnecting)
     if (isConnecting) {
       onCompleteConnection()
     } else {
@@ -127,7 +127,7 @@ export function ClassNode({
 
   const handleConnectionClick = (e: React.MouseEvent) => {
     e.stopPropagation()
-    console.log("[v0] Connection button clicked for:", data.name)
+    console.log(" Connection button clicked for:", data.name)
     onStartConnection()
   }
 
@@ -141,8 +141,8 @@ export function ClassNode({
     if (newName.trim() && onRequestSuggestions) {
       const timer = setTimeout(async () => {
         try {
-          console.log("[v0] Requesting AI suggestions for:", newName.trim())
-          const response = await fetch("/api/ai/suggestions", {
+          console.log(" Requesting AI suggestions for:", newName.trim())
+          const response = await fetch("/api/ai/sugerencias-class", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ className: newName.trim() }),
@@ -151,15 +151,15 @@ export function ClassNode({
           if (response.ok) {
             const data = await response.json()
             if (data.suggestions && data.suggestions.length > 0) {
-              console.log("[v0] Received suggestions:", data.suggestions)
+              console.log(" Received suggestions:", data.suggestions)
               setSuggestions(data.suggestions)
               setShowSuggestions(true)
             }
           } else {
-            console.log("[v0] API response not ok:", response.status, response.statusText)
+            console.log(" API response not ok:", response.status, response.statusText)
           }
         } catch (error) {
-          console.log("[v0] Error getting AI suggestions:", error)
+          console.log(" Error getting AI suggestions:", error)
         }
       }, 1000)
 

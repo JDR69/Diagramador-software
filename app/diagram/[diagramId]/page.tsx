@@ -67,10 +67,12 @@ export default function DiagramPage() {
       onRelationshipsChange: setRelationships,
     })
 
-  // Guardar automáticamente en el backend cuando cambian clases o relaciones
+  // Guardar automáticamente en el backend cuando cambian clases o relaciones (siempre, aunque estén vacíos)
   useEffect(() => {
     if (!diagramId) return
-    if (classes.length === 0 && relationships.length === 0) return
+    // Solo enviar clases vacías si el usuario realmente eliminó todas
+    const shouldSendEmptyClasses = classes.length === 0 && relationships.length > 0;
+    if (classes.length === 0 && !shouldSendEmptyClasses) return;
     const save = async () => {
       try {
         await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {

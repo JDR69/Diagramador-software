@@ -27,6 +27,18 @@ export default function HomePage() {
     if (typeof window === "undefined") return []
     return JSON.parse(localStorage.getItem(DIAGRAM_HISTORY_KEY) || "[]")
   }
+  function removeDiagramFromHistory(id: string) {
+    if (typeof window === "undefined") return
+    const history = JSON.parse(localStorage.getItem(DIAGRAM_HISTORY_KEY) || "[]")
+    const newHistory = history.filter((item: string) => item !== id)
+    localStorage.setItem(DIAGRAM_HISTORY_KEY, JSON.stringify(newHistory))
+    setHistory(newHistory)
+  }
+  function clearDiagramHistory() {
+    if (typeof window === "undefined") return
+    localStorage.removeItem(DIAGRAM_HISTORY_KEY)
+    setHistory([])
+  }
 
   const router = useRouter()
   const [currentView, setCurrentView] = useState<"home" | "diagram">("home")
@@ -135,12 +147,20 @@ export default function HomePage() {
                 </Button>
                 {history.length > 0 && (
                   <div className="mt-2">
-                    <div className="text-xs text-gray-500 mb-1">Historial reciente:</div>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-xs text-gray-500">Historial reciente:</div>
+                      <Button variant="outline" size="xs" className="text-xs px-2 py-0 h-6" onClick={clearDiagramHistory}>
+                        Limpiar todo
+                      </Button>
+                    </div>
                     <ul className="space-y-1">
                       {history.map((id) => (
-                        <li key={id}>
-                          <Button variant="ghost" className="w-full justify-start text-xs" onClick={() => handleContinueDiagram(id)}>
+                        <li key={id} className="flex items-center gap-2 group">
+                          <Button variant="ghost" className="flex-1 justify-start text-xs" onClick={() => handleContinueDiagram(id)}>
                             {id}
+                          </Button>
+                          <Button variant="destructive" size="icon" className="h-6 w-6 text-xs opacity-70 group-hover:opacity-100" title="Eliminar" onClick={() => removeDiagramFromHistory(id)}>
+                            ×
                           </Button>
                         </li>
                       ))}

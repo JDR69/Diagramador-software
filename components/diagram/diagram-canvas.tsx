@@ -67,7 +67,7 @@ export function DiagramCanvas({
       },
     }
     onClassesChange([...classes, newClass])
-    console.log("[v0] Added suggested class:", className)
+    console.log(" Added suggested class:", className)
   }
 
   const handleUpdateClass = (id: string, updates: Partial<ClassData>) => {
@@ -80,14 +80,14 @@ export function DiagramCanvas({
   }
 
   const handleStartConnection = (classId: string) => {
-    console.log("[v0] Starting connection from class:", classId)
+    console.log(" Starting connection from class:", classId)
     setIsConnecting(true)
     setConnectingFrom(classId)
     setSelectedClass(classId)
   }
 
   const handleCompleteConnection = (toClassId: string) => {
-    console.log("[v0] Completing connection to class:", toClassId, "from:", connectingFrom)
+    console.log(" Completing connection to class:", toClassId, "from:", connectingFrom)
     if (connectingFrom && connectingFrom !== toClassId) {
       const newRelationship: RelationshipData = {
         id: `rel-${Date.now()}`,
@@ -98,7 +98,7 @@ export function DiagramCanvas({
         name: "relacion",
       }
       onRelationshipsChange([...relationships, newRelationship])
-      console.log("[v0] Created new relationship:", newRelationship)
+      console.log("[] Created new relationship:", newRelationship)
     }
     setIsConnecting(false)
     setConnectingFrom(null)
@@ -108,7 +108,6 @@ export function DiagramCanvas({
     if (e.target === canvasRef.current) {
       setSelectedClass(null)
       if (isConnecting) {
-        console.log("[v0] Cancelling connection mode")
         setIsConnecting(false)
         setConnectingFrom(null)
       }
@@ -118,7 +117,7 @@ export function DiagramCanvas({
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isConnecting) {
-        console.log("[v0] Escape pressed, cancelling connection")
+  
         setIsConnecting(false)
         setConnectingFrom(null)
       }

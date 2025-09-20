@@ -4,8 +4,6 @@ import { groq } from "@ai-sdk/groq"
 
 const suggestionCache = new Map<string, { suggestions: string[]; timestamp: number }>()
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
-const RATE_LIMIT_DELAY = 30 * 1000 // 30 seconds between API calls
-let lastApiCall = 0
 
 const fallbackSuggestions: Record<string, string[]> = {
   usuario: ["TipoUsuario", "Perfil", "Direccion", "Sesion"],
@@ -44,40 +42,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ suggestions: cached.suggestions })
     }
 
-    const now = Date.now()
-    if (now - lastApiCall < RATE_LIMIT_DELAY) {
-      console.log("[App] Rate limited, using fallback suggestions for:", className)
-      const fallback = getFallbackSuggestions(className)
-      suggestionCache.set(cacheKey, { suggestions: fallback, timestamp: now })
-      return NextResponse.json({ suggestions: fallback })
-    }
-
     try {
-      lastApiCall = now
-
       const { text } = await generateText({
         model: groq("llama-3.1-8b-instant"),
-        prompt: `Sugiere 3 tablas relacionadas para "${className}" en español, formato PascalCase, una por línea:`,
-        maxTokens: 50, // Reduced from 150
+        prompt: `Eres un experto en bases de datos y modelado UML. Dada la clase principal "${className}", sugiere 3 nombres de tablas relacionadas, que sean útiles, realistas y variadas, en español, en formato PascalCase, una por línea. No repitas palabras genéricas como Tipo, Detalle, Estado, Relacion, Generico, ni uses palabras del nombre de la clase. Ejemplo para "Usuario": Perfil, Direccion, Sesion. Ejemplo para "Producto": Categoria, Inventario, Proveedor.`,
+        maxTokens: 80,
       })
 
       const suggestions = text
         .split("\n")
         .map((line) => line.trim())
-        .filter((line) => line && !line.includes(":") && !line.includes("-"))
-        .slice(0, 3) // Reduced from 4
+        .filter((line) => line && !line.includes(":") && !line.includes("-") && !/Tipo|Detalle|Estado|Relacion|Generico/i.test(line) && !line.toLowerCase().includes(className.toLowerCase()))
+        .slice(0, 3)
 
       if (suggestions.length > 0) {
-        suggestionCache.set(cacheKey, { suggestions, timestamp: now })
+        suggestionCache.set(cacheKey, { suggestions, timestamp: Date.now() })
         return NextResponse.json({ suggestions })
       } else {
         throw new Error("No valid suggestions generated")
       }
     } catch (apiError: any) {
       console.log("[App] API error, using fallback:", apiError.message)
-
       const fallback = getFallbackSuggestions(className)
-      suggestionCache.set(cacheKey, { suggestions: fallback, timestamp: now })
+      suggestionCache.set(cacheKey, { suggestions: fallback, timestamp: Date.now() })
       return NextResponse.json({ suggestions: fallback })
     }
   } catch (error) {
