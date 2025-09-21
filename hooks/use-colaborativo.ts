@@ -1,6 +1,27 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
+
+// Utilidad simple de throttle
+function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
+  let lastCall = 0;
+  let lastArgs: any;
+  let timeout: any;
+  return function(this: any, ...args: any[]) {
+    const now = Date.now();
+    lastArgs = args;
+    if (now - lastCall >= limit) {
+      lastCall = now;
+      func.apply(this, args);
+    } else {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        lastCall = Date.now();
+        func.apply(this, lastArgs);
+      }, limit - (now - lastCall));
+    }
+  } as T;
+}
 import { CollaborationWebSocket } from "@/app/lib/websocket"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
@@ -155,14 +176,19 @@ export function useCollaboration({
     [isConnected],
   )
 
-  const broadcastCursorMove = useCallback(
-    (x: number, y: number) => {
+
+  // Throttle: máximo 30 mensajes por segundo (cada 33ms)
+  const throttledSendCursor = useRef(
+    throttle((x: number, y: number) => {
       if (wsRef.current && isConnected) {
-        wsRef.current.send("cursor_move", { cursor: { x, y } })
+        wsRef.current.send("cursor_move", { cursor: { x, y } });
       }
-    },
-    [isConnected],
-  )
+    }, 33)
+  );
+
+  const broadcastCursorMove = useCallback((x: number, y: number) => {
+    throttledSendCursor.current(x, y);
+  }, [isConnected]);
 
   useEffect(() => {
     const interval = setInterval(() => {
