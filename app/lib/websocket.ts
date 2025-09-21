@@ -27,9 +27,9 @@ export class CollaborationWebSocket {
 
       // Real WebSocket implementation for production
 
-  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:"
-  // For development, use backend port 8010 (Daphne)
-  const wsUrl = `${protocol}//localhost:8010/ws/collaboration/${this.diagramId}/?userId=${this.userId}`
+
+  // Usar backend en Render para WebSocket
+  const wsUrl = `wss://diagramador-backend.onrender.com/ws/collaboration/${this.diagramId}/?userId=${this.userId}`
 
       this.ws = new WebSocket(wsUrl)
 
