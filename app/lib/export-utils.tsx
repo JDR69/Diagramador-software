@@ -28,27 +28,26 @@ export class DiagramExporter {
     relationships: RelationshipData[],
     format: "png" | "jpg",
   ): Promise<Blob> {
-    // Get element dimensions
+
     const rect = element.getBoundingClientRect()
     const canvas = document.createElement("canvas")
     const ctx = canvas.getContext("2d")!
 
-    // Set high resolution
     const scale = 2
     canvas.width = rect.width * scale
     canvas.height = rect.height * scale
     ctx.scale(scale, scale)
 
-    // Fill background
+
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(0, 0, rect.width, rect.height)
 
-    // Draw classes
+
     classes.forEach((classData) => {
       this.drawClass(ctx, classData)
     })
 
-    // Draw relationships
+  
     relationships.forEach((relationship) => {
       const fromClass = classes.find((c) => c.id === relationship.from)
       const toClass = classes.find((c) => c.id === relationship.to)
@@ -74,27 +73,27 @@ export class DiagramExporter {
     const attributeHeight = 30
     const totalHeight = headerHeight + classData.attributes.length * attributeHeight + 40
 
-    // Draw class rectangle
+
     ctx.fillStyle = "#ffffff"
     ctx.fillRect(x, y, width, totalHeight)
 
-    // Draw border
+  
     ctx.strokeStyle = "#e5e7eb"
     ctx.lineWidth = 1
     ctx.strokeRect(x, y, width, totalHeight)
 
-    // Draw header
+ 
     ctx.fillStyle = "#f3f4f6"
     ctx.fillRect(x, y, width, headerHeight)
     ctx.strokeRect(x, y, width, headerHeight)
 
-    // Draw class name
+
     ctx.fillStyle = "#111827"
     ctx.font = "14px system-ui, -apple-system, sans-serif"
     ctx.textAlign = "center"
     ctx.fillText(classData.name, x + width / 2, y + headerHeight / 2 + 5)
 
-    // Draw attributes
+
     ctx.textAlign = "left"
     ctx.font = "12px system-ui, -apple-system, sans-serif"
     classData.attributes.forEach((attr, index) => {
@@ -205,7 +204,7 @@ export class DiagramExporter {
       let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}" viewBox="0 0 ${rect.width} ${rect.height}">\n`
       svgContent += `<rect width="100%" height="100%" fill="white"/>\n`
 
-      // Draw classes
+
       classes.forEach((classData) => {
         const x = classData.position.x
         const y = classData.position.y
@@ -213,23 +212,23 @@ export class DiagramExporter {
         const headerHeight = 40
         const totalHeight = headerHeight + classData.attributes.length * 30 + 40
 
-        // Class rectangle
+ 
         svgContent += `<rect x="${x}" y="${y}" width="${width}" height="${totalHeight}" fill="white" stroke="#e5e7eb" strokeWidth="1"/>\n`
 
-        // Header
+
         svgContent += `<rect x="${x}" y="${y}" width="${width}" height="${headerHeight}" fill="#f3f4f6" stroke="#e5e7eb" strokeWidth="1"/>\n`
 
-        // Class name
+   
         svgContent += `<text x="${x + width / 2}" y="${y + headerHeight / 2 + 5}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="14" fill="#111827">${classData.name}</text>\n`
 
-        // Attributes
+       
         classData.attributes.forEach((attr, index) => {
           const attrY = y + headerHeight + index * 30 + 20
           svgContent += `<text x="${x + 10}" y="${attrY}" fontFamily="system-ui, -apple-system, sans-serif" fontSize="12" fill="#111827">• ${attr}</text>\n`
         })
       })
 
-      // Draw relationships
+
       relationships.forEach((relationship) => {
         const fromClass = classes.find((c) => c.id === relationship.from)
         const toClass = classes.find((c) => c.id === relationship.to)
@@ -245,8 +244,8 @@ export class DiagramExporter {
 
           svgContent += `<line x1="${fromPoint.x}" y1="${fromPoint.y}" x2="${toPoint.x}" y2="${toPoint.y}" stroke="#6366f1" strokeWidth="2"/>\n`
 
-          // Cardinality labels
-          const fromLabelPos = {
+
+               const fromLabelPos = {
             x: fromPoint.x + (toPoint.x - fromPoint.x) * 0.2,
             y: fromPoint.y + (toPoint.y - fromPoint.y) * 0.2 - 5,
           }
@@ -258,7 +257,7 @@ export class DiagramExporter {
           svgContent += `<text x="${fromLabelPos.x}" y="${fromLabelPos.y}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="11" fill="#6366f1">${relationship.fromCardinality}</text>\n`
           svgContent += `<text x="${toLabelPos.x}" y="${toLabelPos.y}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="11" fill="#6366f1">${relationship.toCardinality}</text>\n`
 
-          // Relationship type
+ 
           const midPoint = {
             x: (fromPoint.x + toPoint.x) / 2,
             y: (fromPoint.y + toPoint.y) / 2,
@@ -279,7 +278,7 @@ export class DiagramExporter {
     let sql = "-- Diagrama de Clases UML - Script SQL\n"
     sql += "-- Generado automáticamente\n\n"
 
-    // Generate CREATE TABLE statements
+    // Generate CREATE TABLE 
     classes.forEach((classData) => {
       sql += `-- Tabla: ${classData.name}\n`
       sql += `CREATE TABLE ${classData.name.toLowerCase()} (\n`
