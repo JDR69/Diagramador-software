@@ -133,23 +133,24 @@ export default function DiagramPage() {
     if (action.type === "add_class" && action.data?.name) {
       // Evitar duplicados
       if (!classes.some(cls => cls.name === action.data.name)) {
-        setClasses(prev => [
-          ...prev,
+        const newClasses = [
+          ...classes,
           {
             id: `class-${Date.now()}`,
             name: action.data.name,
             attributes: [],
-            position: { x: 100 + prev.length * 50, y: 100 + prev.length * 50 },
+            position: { x: 100 + classes.length * 50, y: 100 + classes.length * 50 },
           },
-        ])
+        ]
+        handleClassesChange(newClasses) // ✅ Usar handleClassesChange para activar WebSocket
       }
     }
     if (action.type === "add_relationship" && action.data?.from && action.data?.to) {
       const fromClass = classes.find(cls => cls.name === action.data.from)
       const toClass = classes.find(cls => cls.name === action.data.to)
       if (fromClass && toClass) {
-        setRelationships(prev => [
-          ...prev,
+        const newRelationships = [
+          ...relationships,
           {
             id: `rel-${Date.now()}`,
             from: fromClass.id,
@@ -158,15 +159,17 @@ export default function DiagramPage() {
             cardinality: { from: "1", to: "1" },
             name: "relacion",
           },
-        ])
+        ]
+        handleRelationshipsChange(newRelationships) // ✅ Usar handleRelationshipsChange para activar WebSocket
       }
     }
     if (action.type === "add_attribute" && action.data?.className && action.data?.attribute) {
-      setClasses(prev => prev.map(cls =>
+      const newClasses = classes.map(cls =>
         cls.name === action.data.className && !cls.attributes.includes(action.data.attribute)
           ? { ...cls, attributes: [...cls.attributes, action.data.attribute] }
           : cls
-      ))
+      )
+      handleClassesChange(newClasses) // ✅ Usar handleClassesChange para activar WebSocket
     }
   }
 
