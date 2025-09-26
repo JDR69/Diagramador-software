@@ -8,8 +8,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Editor from "@/components/editor"
 import { FileText, Plus, Users } from "lucide-react"
-import { useCollaboration } from "@/hooks/use-colaborativo"
-import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 
 export default function HomePage() {
