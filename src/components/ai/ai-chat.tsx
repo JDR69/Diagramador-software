@@ -147,7 +147,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
           return
         }
       } catch (error) {
-        console.log("[v0] Permission API not supported, continuing with audio access attempt")
+        console.log(" Permission API not supported, continuing with audio access attempt")
       }
 
       try {
@@ -163,7 +163,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
             },
           })
         } catch (constraintError) {
-          console.log("[v0] Ideal constraints failed, trying basic audio")
+          console.log(" Ideal constraints failed, trying basic audio")
           testStream = await navigator.mediaDevices.getUserMedia({
             audio: true,
           })
@@ -188,7 +188,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
         }
         setMessages((prev) => [...prev, errorMessage])
       } catch (error) {
-        console.error("[v0] Error accessing microphone:", error)
+        console.error(" Error accessing microphone:", error)
 
         let errorText = "No pude acceder al micrófono. Verifica los permisos del navegador."
         if (error instanceof DOMException) {
@@ -245,7 +245,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
     if (!SpeechRecognition) {
-      console.error("[v0] Speech recognition not supported")
+      console.error(" Speech recognition not supported")
       if (audioStream) {
         audioStream.getTracks().forEach((track) => track.stop())
         setAudioStream(null)
@@ -269,12 +269,12 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => {
-      console.log("[v0] Speech recognition started")
+      console.log(" Speech recognition started")
       setIsRecording(true)
     }
 
     recognition.onresult = (event: any) => {
-      console.log("[v0] Speech recognition result:", event.results[0][0].transcript)
+      console.log(" Speech recognition result:", event.results[0][0].transcript)
       const transcript = event.results[0][0].transcript
       setInputValue(transcript)
       setIsRecording(false)
@@ -286,7 +286,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
     }
 
     recognition.onerror = (event: any) => {
-      console.error("[v0] Speech recognition error:", event.error)
+      console.error(" Speech recognition error:", event.error)
       setIsRecording(false)
 
       if (audioStream) {
@@ -332,7 +332,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
     }
 
     recognition.onend = () => {
-      console.log("[v0] Speech recognition ended")
+      console.log(" Speech recognition ended")
       setIsRecording(false)
 
       if (audioStream) {
@@ -344,7 +344,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
     try {
       recognition.start()
     } catch (error) {
-      console.error("[v0] Error starting speech recognition:", error)
+      console.error(" Error starting speech recognition:", error)
       setIsRecording(false)
 
       if (audioStream) {

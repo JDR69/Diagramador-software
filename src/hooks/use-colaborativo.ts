@@ -22,7 +22,7 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T
     }
   } as T;
 }
-import { CollaborationWebSocket } from "@/app/lib/websocket"
+import { CollaborationWebSocket } from "@/lib/websocket"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 interface Collaborator {

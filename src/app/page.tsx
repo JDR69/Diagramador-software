@@ -10,7 +10,7 @@ import Editor from "@/components/editor"
 import { FileText, Plus, Users } from "lucide-react"
 
 
-export default function HomePage() {
+export default function Page() {
   // --- Historial de diagramas en localStorage ---
   const DIAGRAM_HISTORY_KEY = "diagram_history"
   function saveDiagramToHistory(id: string) {
@@ -147,7 +147,7 @@ export default function HomePage() {
                   <div className="mt-2">
                     <div className="flex items-center justify-between mb-1">
                       <div className="text-xs text-gray-500">Historial reciente:</div>
-                      <Button variant="outline" size="xs" className="text-xs px-2 py-0 h-6" onClick={clearDiagramHistory}>
+                      <Button variant="outline" size="sm" className="text-xs px-2 py-0 h-6" onClick={clearDiagramHistory}>
                         Limpiar todo
                       </Button>
                     </div>
@@ -167,14 +167,7 @@ export default function HomePage() {
                 )}
               </CardContent>
             </Card>
-          </div>
-
-          <div className="mt-16 text-center">
-            <div className="flex items-center justify-center gap-2 text-gray-600 dark:text-gray-400">
-              <Users className="w-5 h-5" />
-              <span>Colaboración en tiempo real • IA integrada • Exportación múltiple</span>
-            </div>
-          </div>
+          </div>   
         </div>
       </div>
     )
