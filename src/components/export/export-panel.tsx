@@ -100,7 +100,7 @@ export function ExportPanel({ classes = [], relationships = [] }: ExportPanelPro
         zip.file(path, content)
       })
 
-      // Generate the zip file
+      // Generate the zip filee
       const zipBlob = await zip.generateAsync({ type: "blob" })
       downloadFile(zipBlob, "spring-boot-project.zip")
     } catch (error) {
