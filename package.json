@@ -4,8 +4,12 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "start": "next start",
-    "dev": "next dev"
+    "start": "node node_modules/next/dist/bin/next start",
+    "dev": "next dev",
+    "postinstall": "next build"
+  },
+  "engines": {
+    "node": "^20"
   },
   "dependencies": {
     "@ai-sdk/groq": "latest",
