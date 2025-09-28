@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { BACKEND_API_BASE } from "@/lib/config"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
@@ -27,7 +28,7 @@ export default function Editor({ diagramId, onBack, onNotFound, mode = "edit" }:
 	const [userName] = useState(() => `Usuario ${Math.floor(Math.random() * 1000)}`)
 	const [notFound, setNotFound] = useState(false)
 
-	const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/app/diagrams"
+	const BACKEND_URL = BACKEND_API_BASE
 
 	// Cargar diagrama si hay id y es modo edición
 	useEffect(() => {

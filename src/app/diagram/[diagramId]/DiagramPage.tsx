@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
+import { BACKEND_API_BASE } from "@/lib/config"
 import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
@@ -20,13 +21,13 @@ export default function DiagramPage() {
   const [userId] = useState(() => `user-${Math.random().toString(36).substring(2, 15)}`)
   const [userName] = useState(() => `Usuario ${Math.floor(Math.random() * 1000)}`)
   const [notFound, setNotFound] = useState(false)
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/app/diagrams"
+  const BACKEND_URL = BACKEND_API_BASE
 
   // Cargar diagrama desde el backend al montar
   useEffect(() => {
     async function fetchDiagram() {
       try {
-        const res = await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`)
+  const res = await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`)
         if (res.status === 404) {
           setNotFound(true)
           return
@@ -75,7 +76,7 @@ export default function DiagramPage() {
     if (classes.length === 0 && !shouldSendEmptyClasses) return;
     const save = async () => {
       try {
-        await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {
+  await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

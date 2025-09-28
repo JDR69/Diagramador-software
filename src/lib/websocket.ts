@@ -1,4 +1,6 @@
 // Utilidades de WebSocket
+import { collaborationWsUrl } from "@/lib/config";
+
 export class CollaborationWebSocket {
   private ws: WebSocket | null = null
   private diagramId: string
@@ -26,10 +28,8 @@ export class CollaborationWebSocket {
       }
 
       // Real WebSocket implementation for production
-
-
-  // Usar backend en Render para WebSocket
-  const wsUrl = `wss://diagramador-backend.onrender.com/ws/collaboration/${this.diagramId}/?userId=${this.userId}`
+      // Usar backend en Azure
+  const wsUrl = collaborationWsUrl(this.diagramId)
 
       this.ws = new WebSocket(wsUrl)
 

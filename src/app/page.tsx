@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useCallback, useEffect } from "react"
+import { BACKEND_API_BASE } from "@/lib/config"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -53,11 +54,11 @@ export default function Page() {
   }, [])
 
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/app/diagrams"
+  const BACKEND_URL = BACKEND_API_BASE
   const handleNewDiagram = async () => {
     // Crear diagrama en backend
     try {
-      const res = await fetch(`${BACKEND_URL}/diagrams/`, {
+  const res = await fetch(`${BACKEND_URL}/diagrams/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: "Nuevo Diagrama", description: "", is_public: false, classes: [], relationships: [] }),
@@ -85,7 +86,7 @@ export default function Page() {
     }
     // Verificar si existe en backend
     try {
-      const res = await fetch(`${BACKEND_URL}/diagrams/${targetId}/`)
+  const res = await fetch(`${BACKEND_URL}/diagrams/${targetId}/`)
       if (res.status === 404) {
         // Si no existe, crearlo
         await handleNewDiagram()
