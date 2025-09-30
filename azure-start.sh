@@ -3,7 +3,7 @@ set -euo pipefail
 
 echo "[azure-start] Node version: $(node -v)"
 
-# Instalar deps solo si no existe node_modules
+# Instalar depens solo si no existe node_modules
 if [ ! -d node_modules ]; then
   echo "[azure-start] Instalando dependencias (npm ci)";
   npm ci --no-audit --no-fund;
