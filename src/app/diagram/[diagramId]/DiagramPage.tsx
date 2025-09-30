@@ -8,7 +8,6 @@ import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
 import { AIChat } from "@/components/ai/ai-chat"
 import { ExportPanel } from "@/components/export/export-panel"
 import { CollaborationPanel } from "@/components/colaborativo/colaborativo-panel"
-import { CursorOverlay } from "@/components/colaborativo/cursor"
 import { useCollaboration } from "@/hooks/use-colaborativo"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
@@ -205,7 +204,6 @@ export default function DiagramPage() {
             onClassesChange={handleClassesChange}
             onRelationshipsChange={handleRelationshipsChange}
           />
-          <CursorOverlay collaborators={collaborators} />
         </div>
         <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <AIChat diagramId={diagramId} onAIAction={handleAIAction} />

@@ -8,7 +8,7 @@ import { DiagramCanvas } from "@/components/diagram/diagram-canvas"
 import { AIChat } from "@/components/ai/ai-chat"
 import { ExportPanel } from "@/components/export/export-panel"
 import { CollaborationPanel } from "@/components/colaborativo/colaborativo-panel"
-import { CursorOverlay } from "@/components/colaborativo/cursor"
+
 import { useCollaboration } from "@/hooks/use-colaborativo"
 import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
@@ -71,34 +71,35 @@ export default function Editor({ diagramId, onBack, onNotFound, mode = "edit" }:
 	// Guardar automáticamente en el backend cuando cambian clases o relaciones (solo si editando)
 		useEffect(() => {
 			if (!diagramId || mode === "new") return
-			// Guardar SIEMPRE aunque estén vacíos
-			const save = async () => {
+			// Evitar PATCH vacío inicial para reducir latencia y writes innecesarios
+			if (classes.length === 0 && relationships.length === 0) return
+			const payload = {
+				classes: classes.map(cls => ({
+					id: cls.id,
+					name: cls.name,
+					attributes: cls.attributes,
+					position: cls.position,
+				})),
+				relationships: relationships.map(rel => ({
+					id: rel.id,
+					from: rel.from,
+					to: rel.to,
+					type: rel.type,
+					cardinality: rel.cardinality,
+					name: rel.name,
+				}))
+			}
+			;(async () => {
 				try {
 					await fetch(`${BACKEND_URL}/diagrams/${diagramId}/`, {
 						method: "PATCH",
 						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							classes: classes.map(cls => ({
-								id: cls.id,
-								name: cls.name,
-								attributes: cls.attributes,
-								position: cls.position,
-							})),
-							relationships: relationships.map(rel => ({
-								id: rel.id,
-								from: rel.from,
-								to: rel.to,
-								type: rel.type,
-								cardinality: rel.cardinality,
-								name: rel.name,
-							})),
-						}),
+						body: JSON.stringify(payload),
 					})
 				} catch (e) {
 					console.error("Error guardando diagrama:", e)
 				}
-			}
-			save()
+			})()
 		}, [diagramId, classes, relationships, mode])
 
 		const { collaborators, isConnected, broadcastClassUpdate, broadcastRelationshipUpdate, broadcastCursorMove } =
@@ -174,7 +175,7 @@ export default function Editor({ diagramId, onBack, onNotFound, mode = "edit" }:
 							onClassesChange={handleClassesChange}
 							onRelationshipsChange={handleRelationshipsChange}
 						/>
-						<CursorOverlay collaborators={collaborators} />
+					
 					</div>
 					{showAIChat && (
 						<div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">

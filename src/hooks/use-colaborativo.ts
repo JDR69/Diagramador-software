@@ -1,6 +1,9 @@
 "use client"
 
 import { useEffect, useState, useCallback, useRef } from "react"
+import { CollaborationWebSocket } from "@/lib/websocket"
+import { buildDiagramPositionsUrl } from "@/lib/config"
+import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 // Utilidad simple de throttle
 function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T {
@@ -22,8 +25,6 @@ function throttle<T extends (...args: any[]) => void>(func: T, limit: number): T
     }
   } as T;
 }
-import { CollaborationWebSocket } from "@/lib/websocket"
-import type { ClassData, RelationshipData } from "@/components/diagram/diagram-canvas"
 
 interface Collaborator {
   id: string
@@ -55,6 +56,51 @@ export function useCollaboration({
   // Para handshake: mantener el último estado conocido
   const lastClassesRef = useRef<ClassData[]>([])
   const lastRelationshipsRef = useRef<RelationshipData[]>([])
+  // Buffer de posiciones pendientes para persistir en bulk cada 5s (estrategia B solicitada)
+  const pendingPositionsRef = useRef<Record<string, { x: number; y: number }>>({})
+  const saveInFlightRef = useRef(false)
+  const lastFlushRef = useRef<number>(0)
+  const FLUSH_INTERVAL_MS = 5000
+  const flushTimerRef = useRef<any>(null)
+
+  // Programa un flush diferido respetando intervalo mínimo
+  function programFlush() {
+    if (flushTimerRef.current) return
+    flushTimerRef.current = setTimeout(() => {
+      flushTimerRef.current = null
+      manualFlush()
+    }, FLUSH_INTERVAL_MS)
+  }
+
+  // Envía al backend las posiciones acumuladas usando el endpoint bulk
+  async function manualFlush() {
+    const payload = pendingPositionsRef.current
+    const ids = Object.keys(payload)
+    if (!diagramId || !ids.length || saveInFlightRef.current) return
+    // Copiar y limpiar buffer primero para no perder movimientos que lleguen durante la request
+    pendingPositionsRef.current = {}
+    saveInFlightRef.current = true
+    try {
+  await fetch(buildDiagramPositionsUrl(diagramId), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classes: ids.map(id => ({ id, position: payload[id] }))
+        })
+      })
+      lastFlushRef.current = Date.now()
+    } catch (e) {
+      // Reinsertar en buffer en caso de error para reintento posterior
+      for (const id of ids) {
+        if (!(id in pendingPositionsRef.current)) {
+          pendingPositionsRef.current[id] = payload[id]
+        }
+      }
+      console.error('[collab] error guardando posiciones bulk', e)
+    } finally {
+      saveInFlightRef.current = false
+    }
+  }
 
   useEffect(() => {
     if (!diagramId) return
@@ -161,6 +207,16 @@ export function useCollaboration({
         lastUpdateRef.current = Date.now()
         wsRef.current.send("class_update", { classes })
       }
+      // Registrar posiciones en buffer (sin persistir aún)
+      for (const c of classes) {
+        if (c && typeof c === 'object' && 'id' in c && (c as any).position) {
+          const pos: any = (c as any).position
+          if (pos && typeof pos.x === 'number' && typeof pos.y === 'number') {
+            pendingPositionsRef.current[c.id] = { x: pos.x, y: pos.y }
+          }
+        }
+      }
+      programFlush()
     },
     [isConnected],
   )
@@ -199,12 +255,40 @@ export function useCollaboration({
     return () => clearInterval(interval)
   }, [])
 
+  // Intervalo de seguridad: flush cada 5s aunque no haya drag end explícito
+  useEffect(() => {
+    const auto = setInterval(() => {
+      manualFlush()
+    }, FLUSH_INTERVAL_MS)
+    return () => clearInterval(auto)
+  }, [diagramId])
+
+  // Flush al cerrar/recargar la pestaña (best-effort)
+  useEffect(() => {
+    function handleBeforeUnload() {
+      if (!diagramId) return
+      const payload = pendingPositionsRef.current
+      const ids = Object.keys(payload)
+      if (!ids.length) return
+      try {
+        // Enviar sincrónicamente con keepalive (si el navegador soporta)
+        navigator.sendBeacon?.(buildDiagramPositionsUrl(diagramId), new Blob([JSON.stringify({
+          classes: ids.map(id => ({ id, position: payload[id] }))
+        })], { type: 'application/json' }))
+      } catch (_) { /* ignorar */ }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [diagramId])
+
   return {
     collaborators,
     isConnected,
     broadcastClassUpdate,
     broadcastRelationshipUpdate,
     broadcastCursorMove,
+    // API opcional para forzar flush (por ejemplo al terminar un drag específico)
+    flushPositions: () => manualFlush()
   }
 }
 
@@ -227,3 +311,18 @@ function generateUserColor(userId: string): string {
 
   return colors[Math.abs(hash) % colors.length]
 }
+
+// -------------------- Persistencia diferida de posiciones --------------------
+// Nota: Se agrega fuera del hook la lógica utilitaria para mantener el archivo organizado.
+// Sin embargo, la mayor parte de la integración está dentro del hook.
+
+// (No export) Se implementan dentro del closure del hook usando refs. Para TypeScript puro podría
+// separarse, pero aquí mantenemos inline por simplicidad y contexto de estado.
+
+// Añadimos las funciones dentro del hook mediante declaración adelantada (hoisting JS permite). Para claridad
+// las colocamos al final del archivo. En un refactor futuro convendría extraerlas.
+
+// Estas declaraciones se colocan al final porque usan variables definidas dentro del hook (refs). TypeScript
+// permite esto siempre que se definan antes de usarse en ejecución; aquí se hace con function declarations
+// dentro del hook. Ajustado dentro del parche principal en lugar de secciones separadas.
+

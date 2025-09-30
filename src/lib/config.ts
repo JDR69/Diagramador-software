@@ -15,3 +15,5 @@ export const BACKEND_WS_BASE = (
 export const collaborationWsUrl = (diagramId: string) => `${BACKEND_WS_BASE}/ws/collaboration/${diagramId}/`;
 
 export const buildDiagramUrl = (id: string) => `${BACKEND_API_BASE}/diagrams/${id}/`;
+// Endpoint bulk positions action (detail action in DiagramViewSet)
+export const buildDiagramPositionsUrl = (id: string) => `${BACKEND_API_BASE}/diagrams/${id}/positions/`;
