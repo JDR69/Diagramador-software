@@ -20,12 +20,11 @@ jobs:
           node-version: '20.x'
           cache: 'npm'
       - name: Install deps
-        run: cd class-diagram-software && npm ci --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Build
-        run: cd class-diagram-software && npm run build
+        run: npm run build
       - name: Bundle artifact (with node_modules for fast start)
         run: |
-         cd class-diagram-software
          mkdir -p deploy
          cp -R .next package.json package-lock.json next.config.mjs deploy/
          cp -R public deploy/public || true
