@@ -22,7 +22,6 @@ jobs:
         with:
           node-version: '20.x'
           cache: 'npm'
-          cache-dependency-path: class-diagram-software/package-lock.json
       - name: Install deps
         run: npm ci --no-audit --no-fund
       - name: Build
