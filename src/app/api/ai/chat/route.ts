@@ -28,6 +28,49 @@ export async function POST(request: NextRequest) {
       shortResponse = `Atributo "${addAttrMatch[1]}" añadido a "${addAttrMatch[2]}".`
     }
 
+    // Nuevo: Generar diagrama de clases para cualquier dominio
+    const diagramaMatch = message.match(/crear diagrama de ([a-zA-Z0-9_ ]+)/i)
+    if (diagramaMatch) {
+      const dominio = diagramaMatch[1].trim()
+      const prompt = `Genera una estructura de diagrama de clases para un sistema de ${dominio} con aproximadamente 8 entidades principales, cada una con atributos relevantes (id, nombre, estado, etc) y relaciones entre ellas. Devuelve la información en formato JSON con este esquema:\n{
+        "classes": [
+          { "name": "NombreClase", "attributes": ["id", "nombre", "estado", ...] },
+          ...
+        ],
+        "relationships": [
+          { "from": "ClaseA", "to": "ClaseB", "type": "association" },
+          ...
+        ]
+      }\nNo expliques nada, solo devuelve el JSON.`
+      const { text } = await generateText({
+        model: groq("llama-3.1-8b-instant"),
+        prompt,
+      })
+      let diagram
+      try {
+        diagram = JSON.parse(text)
+      } catch {
+        return NextResponse.json({ error: "La IA no devolvió un JSON válido", raw: text }, { status: 500 })
+      }
+      // Construir acciones para frontend
+      if (diagram && diagram.classes && diagram.relationships) {
+        diagram.classes.forEach((cls: any) => {
+          actions.push({ type: "add_class", data: { name: cls.name } })
+          if (Array.isArray(cls.attributes)) {
+            cls.attributes.forEach((attr: string) => {
+              actions.push({ type: "add_attribute", data: { className: cls.name, attribute: attr } })
+            })
+          }
+        })
+        diagram.relationships.forEach((rel: any) => {
+          actions.push({ type: "add_relationship", data: { from: rel.from, to: rel.to, type: rel.type || "association" } })
+        })
+        return NextResponse.json({ response: `Diagrama de ${dominio} generado automáticamente.`, actions, diagram })
+      } else {
+        return NextResponse.json({ error: "La IA no devolvió la estructura esperada", raw: text }, { status: 500 })
+      }
+    }
+
     // Si hay acción, responder corto
     if (actions.length > 0) {
       return NextResponse.json({ response: shortResponse, actions })
