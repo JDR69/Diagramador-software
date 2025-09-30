@@ -29,15 +29,10 @@ jobs:
         run: npm run build
       - name: Bundle artifact (with node_modules for fast start)
         run: |
-         mkdir -p deploy
-         cp -R .next package.json package-lock.json next.config.mjs deploy/
-         cp -R public deploy/public || true
-         cp -R node_modules deploy/node_modules
-         echo "Artifact content:" && ls -1 deploy
-      - name: Ensure node_modules in Azure
-        run: |
-            cd deploy
-            npm install --omit=dev
+           mkdir -p deploy
+           cp -R .next package.json package-lock.json next.config.mjs deploy/
+           cp -R public deploy/public || true
+           echo "Artifact content:" && ls -1 deploy
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
