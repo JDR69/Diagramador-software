@@ -34,8 +34,8 @@ jobs:
          cp -R public deploy/public || true
          cp -R node_modules deploy/node_modules
          echo "Artifact content:" && ls -1 deploy
-        - name: Ensure node_modules in Azure
-          run: |
+      - name: Ensure node_modules in Azure
+        run: |
             cd deploy
             npm install --omit=dev
       - name: Upload artifact

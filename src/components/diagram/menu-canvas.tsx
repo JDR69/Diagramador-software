@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Plus, Link, Move, ZoomIn, ZoomOut, RotateCcw, MousePointer } from "lucide-react"
+import { Plus, Link} from "lucide-react"
 
 interface CanvasToolbarProps {
   onAddClass: () => void
@@ -38,29 +38,7 @@ export function CanvasToolbar({ onAddClass, isConnecting, onToggleConnection }: 
           </div>
         )}
 
-        <Separator orientation="vertical" className="h-6" />
-
-        <Button variant="outline" size="sm" disabled>
-          <MousePointer className="w-4 h-4 mr-2" />
-          Seleccionar
-        </Button>
-
-        <Button variant="outline" size="sm" disabled>
-          <Move className="w-4 h-4 mr-2" />
-          Mover
-        </Button>
-
-        <Button variant="outline" size="sm" disabled>
-          <ZoomIn className="w-4 h-4" />
-        </Button>
-
-        <Button variant="outline" size="sm" disabled>
-          <ZoomOut className="w-4 h-4" />
-        </Button>
-
-        <Button variant="outline" size="sm" disabled>
-          <RotateCcw className="w-4 h-4" />
-        </Button>
+      
       </div>
     </div>
   )
