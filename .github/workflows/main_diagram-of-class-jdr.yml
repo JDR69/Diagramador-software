@@ -35,6 +35,7 @@ jobs:
           cp package.json package-lock.json next.config.mjs startup.sh deploy/
           cp -r .next deploy/
           cp -r public deploy/
+          cp -r node_modules deploy/
           echo "Deployment package created with:" && ls -la deploy/
 
       - name: Upload artifact for deployment job
