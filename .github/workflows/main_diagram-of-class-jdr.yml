@@ -29,11 +29,19 @@ jobs:
           npm run build --if-present
           npm run test --if-present
 
+      - name: Create deployment package
+        run: |
+          mkdir deploy
+          cp package.json package-lock.json next.config.mjs deploy/
+          cp -r .next deploy/
+          cp -r public deploy/
+          echo "Deployment package created with:" && ls -la deploy/
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: deploy
 
   deploy:
     runs-on: ubuntu-latest
