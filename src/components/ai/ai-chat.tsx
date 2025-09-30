@@ -372,7 +372,6 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
   const quickActions = [
     { label: "Añadir clase", action: "añadir clase Producto" },
     { label: "Crear relación", action: "conectar Usuario con Pedido" },
-    { label: "Sistema completo", action: "crear sistema de e-commerce" },
   ]
 
   const handleQuickAction = (action: string) => {
@@ -488,9 +487,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
             </Button>
           </div>
 
-          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-            {isRecording ? "Grabando... Habla ahora" : "Presiona Enter para enviar, Shift+Enter para nueva línea"}
-          </div>
+  
         </div>
       </CardContent>
     </div>
