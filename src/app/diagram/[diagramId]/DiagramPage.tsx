@@ -129,8 +129,14 @@ export default function DiagramPage() {
   )
 
   const handleAIAction = (action: any) => {
-    if (!action || !action.type) return;
+    console.log("📋 DiagramPage - Received action:", action)
+    if (!action || !action.type) {
+      console.log("❌ Action is missing or has no type")
+      return
+    }
+    
     if (action.type === "add_class" && action.data?.name) {
+      console.log("➕ Adding class:", action.data.name)
       // Evitar duplicados
       if (!classes.some(cls => cls.name === action.data.name)) {
         const newClasses = [
@@ -142,12 +148,17 @@ export default function DiagramPage() {
             position: { x: 100 + classes.length * 50, y: 100 + classes.length * 50 },
           },
         ]
+        console.log("✅ Class added successfully, new classes:", newClasses)
         handleClassesChange(newClasses) // ✅ Usar handleClassesChange para activar WebSocket
+      } else {
+        console.log("⚠️ Class already exists, skipping")
       }
     }
     if (action.type === "add_relationship" && action.data?.from && action.data?.to) {
+      console.log("🔗 Adding relationship from", action.data.from, "to", action.data.to)
       const fromClass = classes.find(cls => cls.name === action.data.from)
       const toClass = classes.find(cls => cls.name === action.data.to)
+      console.log("🔍 Found fromClass:", fromClass, "toClass:", toClass)
       if (fromClass && toClass) {
         const newRelationships = [
           ...relationships,
@@ -160,15 +171,20 @@ export default function DiagramPage() {
             name: "relacion",
           },
         ]
+        console.log("✅ Relationship added successfully, new relationships:", newRelationships)
         handleRelationshipsChange(newRelationships) // ✅ Usar handleRelationshipsChange para activar WebSocket
+      } else {
+        console.log("❌ Could not find classes for relationship")
       }
     }
     if (action.type === "add_attribute" && action.data?.className && action.data?.attribute) {
+      console.log("📝 Adding attribute", action.data.attribute, "to class", action.data.className)
       const newClasses = classes.map(cls =>
         cls.name === action.data.className && !cls.attributes.includes(action.data.attribute)
           ? { ...cls, attributes: [...cls.attributes, action.data.attribute] }
           : cls
       )
+      console.log("✅ Attribute added successfully, updated classes:", newClasses)
       handleClassesChange(newClasses) // ✅ Usar handleClassesChange para activar WebSocket
     }
   }

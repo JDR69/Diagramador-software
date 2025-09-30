@@ -33,7 +33,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
       id: "1",
       type: "ai",
       content:
-        '¡Hola! Soy tu asistente IA para diagramas UML. Comandos simples:\n\n• "añadir clase Usuario" - Crea una clase\n• "conectar Usuario con Pedido" - Crea relación\n• "agregar atributo nombre a Usuario" - Añade atributo\n• "sistema de tienda" - Genera diagrama completo\n\n¿Qué necesitas?',
+        '¡Hola! Soy tu asistente IA para diagramas UML. Comandos simples:\n\n• "añadir clase Usuario" - Crea una clase\n• "conectar Usuario con Pedido" - Crea relación\n• "agregar atributo nombre a Usuario" - Añade atributo\n• "crear diagrama de hospital" - Genera diagrama completo\n• "crear diagrama de universidad" - Genera diagrama completo\n\n¿Qué necesitas?',
       timestamp: new Date(),
     },
   ])
@@ -95,6 +95,7 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
       }
 
       const data = await response.json()
+      console.log("🤖 AI Response:", data)
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -106,11 +107,15 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
       setMessages((prev) => [...prev, aiMessage])
 
       if (data.actions && data.actions.length > 0) {
-        data.actions.forEach((action: AIAction) => {
+        console.log("🔧 Processing actions:", data.actions)
+        data.actions.forEach((action: AIAction, index: number) => {
+          console.log(`🎯 Action ${index + 1}:`, action)
           if (onAIAction) {
             onAIAction(action)
           }
         })
+      } else {
+        console.log("❌ No actions received or actions array is empty")
       }
     } catch (error) {
       console.error("Error sending message:", error)

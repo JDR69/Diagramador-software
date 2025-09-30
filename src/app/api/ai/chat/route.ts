@@ -32,28 +32,41 @@ export async function POST(request: NextRequest) {
     const diagramaMatch = message.match(/crear diagrama de ([a-zA-Z0-9_ ]+)/i)
     if (diagramaMatch) {
       const dominio = diagramaMatch[1].trim()
-      const prompt = `Genera una estructura de diagrama de clases para un sistema de ${dominio} con aproximadamente 8 entidades principales, cada una con atributos relevantes (id, nombre, estado, etc) y relaciones entre ellas. Devuelve la información en formato JSON con este esquema:\n{
-        "classes": [
-          { "name": "NombreClase", "attributes": ["id", "nombre", "estado", ...] },
-          ...
-        ],
-        "relationships": [
-          { "from": "ClaseA", "to": "ClaseB", "type": "association" },
-          ...
-        ]
-      }\nNo expliques nada, solo devuelve el JSON.`
+      const prompt = `Crea un sistema de ${dominio} con 8 clases principales y sus relaciones. Responde ÚNICAMENTE con este JSON (sin explicaciones ni texto adicional):
+
+{
+  "classes": [
+    { "name": "Clase1", "attributes": ["id", "nombre", "estado"] },
+    { "name": "Clase2", "attributes": ["id", "descripcion"] }
+  ],
+  "relationships": [
+    { "from": "Clase1", "to": "Clase2", "type": "association" }
+  ]
+}
+
+Usa nombres de clases relevantes para ${dominio} y atributos apropiados.`
+      
+      console.log("🤖 Sending prompt to AI:", prompt)
       const { text } = await generateText({
         model: groq("llama-3.1-8b-instant"),
         prompt,
       })
+      console.log("🤖 AI Raw response:", text)
+      
       let diagram
       try {
-        diagram = JSON.parse(text)
-      } catch {
+        // Limpiar la respuesta antes de parsear
+        const cleanText = text.trim().replace(/```json|```/g, '').trim()
+        console.log("🧹 Cleaned text:", cleanText)
+        diagram = JSON.parse(cleanText)
+        console.log("✅ Parsed diagram:", diagram)
+      } catch (error) {
+        console.error("❌ JSON Parse error:", error)
         return NextResponse.json({ error: "La IA no devolvió un JSON válido", raw: text }, { status: 500 })
       }
       // Construir acciones para frontend
       if (diagram && diagram.classes && diagram.relationships) {
+        console.log("🔧 Building actions from diagram...")
         diagram.classes.forEach((cls: any) => {
           actions.push({ type: "add_class", data: { name: cls.name } })
           if (Array.isArray(cls.attributes)) {
@@ -65,8 +78,10 @@ export async function POST(request: NextRequest) {
         diagram.relationships.forEach((rel: any) => {
           actions.push({ type: "add_relationship", data: { from: rel.from, to: rel.to, type: rel.type || "association" } })
         })
+        console.log("🎯 Final actions array:", actions)
         return NextResponse.json({ response: `Diagrama de ${dominio} generado automáticamente.`, actions, diagram })
       } else {
+        console.error("❌ Invalid diagram structure:", diagram)
         return NextResponse.json({ error: "La IA no devolvió la estructura esperada", raw: text }, { status: 500 })
       }
     }
