@@ -1,0 +1,18 @@
+[build]
+  publish = "out"
+  command = "npm run build"
+  base = "class-diagram-software"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+  
+  [plugins.inputs]
+    disable_nextjs_plugin = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  NODE_VERSION = "20"
