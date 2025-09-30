@@ -70,4 +70,5 @@ jobs:
           app-name: 'diagram-of-class-jdr'
           slot-name: 'Production'
           package: .
+          startup-command: 'npm install --omit=dev && npm start'
           
