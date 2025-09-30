@@ -1,13 +1,6 @@
 [build]
-  publish = "out"
-  command = "npm run build"
-  base = "class-diagram-software"
-
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-  
-  [plugins.inputs]
-    disable_nextjs_plugin = true
+  publish = "class-diagram-software/out"
+  command = "cd class-diagram-software && npm install && npm run build"
 
 [[redirects]]
   from = "/*"
