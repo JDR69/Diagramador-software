@@ -32,7 +32,7 @@ jobs:
       - name: Create deployment package
         run: |
           mkdir deploy
-          cp package.json package-lock.json next.config.mjs deploy/
+          cp package.json package-lock.json next.config.mjs startup.sh deploy/
           cp -r .next deploy/
           cp -r public deploy/
           echo "Deployment package created with:" && ls -la deploy/
@@ -70,5 +70,5 @@ jobs:
           app-name: 'diagram-of-class-jdr'
           slot-name: 'Production'
           package: .
-          startup-command: 'npm install --omit=dev && npm start'
+          startup-command: 'bash startup.sh'
           
