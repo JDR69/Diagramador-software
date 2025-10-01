@@ -34,7 +34,7 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
       id: "1",
       type: "ai",
       content:
-        '¡Hola! Soy tu asistente IA para diagramas UML. Comandos simples:\n\n• "añadir clase Usuario" - Crea una clase\n• "conectar Usuario con Pedido" - Crea relación\n• "agregar atributo nombre a Usuario" - Añade atributo\n• "crear diagrama de hospital" - Genera diagrama completo\n• "crear diagrama de universidad" - Genera diagrama completo\n\n¿Qué necesitas?',
+        '¡Hola! Soy tu asistente IA para diagramas UML. Comandos simples:\n\n• "añadir clase Usuario"\n• "conectar Usuario con Pedido"\n• "agregar atributo nombre a Usuario"\n• "crear diagrama tienda" (también: "crear diagrama de tienda")\n• "crear diagrama hospital"\n\nRespuestas de diagramas serán cortas; el canvas se actualizará automáticamente.',
       timestamp: new Date(),
     },
   ])

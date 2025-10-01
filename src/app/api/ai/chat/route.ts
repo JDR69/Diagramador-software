@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Nuevo: Generar diagrama de clases para cualquier dominio (regex más flexible)
-  const diagramaMatch = message.match(/crear(?:\s+un)?\s+diagrama\s+de\s+([a-zA-Z0-9áéíóúüñ ]+)/i)
+  const diagramaMatch = message.match(/crear(?:\s+un)?\s+diagrama(?:\s+de)?\s+([a-zA-Z0-9áéíóúüñ ]+)/i)
     console.log("🔍 Checking diagram pattern:", diagramaMatch)
     if (diagramaMatch) {
       const dominio = diagramaMatch[1].trim()
@@ -136,8 +136,7 @@ Si alguna relación es jerárquica usa "inheritance" (solo si aplica).`
         diagram = JSON.parse(cleanText)
         console.log("✅ Parsed diagram:", diagram)
       } catch (error) {
-        console.error("❌ JSON Parse error:", error)
-        console.log("🔄 Using fallback diagram generation...")
+  console.error("❌ JSON Parse error, usando fallback silencioso")
         // Fallback: crear diagrama predefinido para el dominio
         diagram = generateFallbackDiagram(dominio)
         console.log("🛡️ Fallback diagram:", diagram)
@@ -168,8 +167,7 @@ Si alguna relación es jerárquica usa "inheritance" (solo si aplica).`
         console.log("🎯 Final actions array:", actions)
         return NextResponse.json({ response: `Diagrama de ${dominio} generado automáticamente.`, actions, diagram })
       } else {
-        console.error("❌ Invalid diagram structure:", diagram)
-        return NextResponse.json({ error: "La IA no devolvió la estructura esperada", raw: text }, { status: 500 })
+        return NextResponse.json({ response: `No se pudo generar diagrama para "${dominio}". Intenta reformular.`, actions: [] })
       }
     }
 
