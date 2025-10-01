@@ -27,44 +27,28 @@ export class CollaborationWebSocket {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private baseReconnectDelay = 1000; // ms
-  private isSimulated = false; // fallback
   private handshakeTimer: any = null;
   private handshakeTimeoutMs = 4000;
 
   constructor(diagramId: string, userId: string) {
     this.diagramId = diagramId;
     this.userId = userId;
-
-    // Permite desactivar WS reales desde variable de entorno (útil en planes sin soporte)
-    if (process.env.NEXT_PUBLIC_DISABLE_REAL_WS === "true") {
-      this.isSimulated = true;
-      console.warn("[app] Real WebSocket disabled via NEXT_PUBLIC_DISABLE_REAL_WS");
-    }
   }
 
   connect() {
     try {
-      if (this.isSimulated) {
-        console.log("[app] WebSocket running in simulation mode");
-        setTimeout(() => this.emit("connected", {}), 50);
-        return;
-      }
-
       const wsUrl = collaborationWsUrl(this.diagramId);
-      console.log("[app] Connecting WebSocket →", wsUrl);
       this.ws = new WebSocket(wsUrl);
 
-      // Handshake timeout (si no abre, marcamos error y fallback)
+      // Handshake timeout
       this.handshakeTimer = setTimeout(() => {
         if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
-          console.warn("[app] WebSocket handshake timeout – falling back to simulation");
-          this.enableSimulationFallback();
+          this.ws.close();
         }
       }, this.handshakeTimeoutMs);
 
       this.ws.onopen = () => {
         clearTimeout(this.handshakeTimer);
-        console.log("[app] WebSocket connected");
         this.reconnectAttempts = 0;
         this.emit("connected", {});
       };
@@ -74,49 +58,29 @@ export class CollaborationWebSocket {
           const data = JSON.parse(event.data);
           this.emit(data.type, data.payload);
         } catch (error) {
-          console.error("[app] Error parsing WebSocket message:", error, event.data);
+          console.error("[WebSocket] Error parsing message:", error);
         }
       };
 
       this.ws.onclose = (e) => {
         clearTimeout(this.handshakeTimer);
-        const reason = CLOSE_REASONS[e.code] || "Unknown";
-        console.warn(
-          `[app] WebSocket closed code=${e.code} (${reason}) clean=${e.wasClean} attempts=${this.reconnectAttempts}`
-        );
-        this.emit("disconnected", { code: e.code, reason });
+        this.emit("disconnected", { code: e.code, reason: CLOSE_REASONS[e.code] || "Unknown" });
         this.attemptReconnect();
       };
 
       this.ws.onerror = (error) => {
-        console.error("[app] WebSocket error:", error);
         this.emit("error", { error });
       };
     } catch (error) {
-      console.error("[app] Error creating WebSocket:", error);
-      this.enableSimulationFallback();
-    }
-  }
-
-  private enableSimulationFallback() {
-    if (!this.isSimulated) {
-      console.warn("[app] Enabling simulation fallback for collaboration features");
-      this.isSimulated = true;
-      this.disconnect();
-      this.connect();
+      console.error("[WebSocket] Error creating connection:", error);
     }
   }
 
   private attemptReconnect() {
-    if (this.isSimulated) return; // no reconectar en modo simulado
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.baseReconnectDelay * this.reconnectAttempts;
-      console.log(`[app] Reconnecting WebSocket in ${delay}ms (attempt ${this.reconnectAttempts})`);
       setTimeout(() => this.connect(), delay);
-    } else {
-      console.warn("[app] Max WebSocket reconnect attempts reached – switching to simulation");
-      this.enableSimulationFallback();
     }
   }
 
@@ -131,19 +95,7 @@ export class CollaborationWebSocket {
       },
     };
 
-    if (this.isSimulated) {
-      console.log("[app] (simulated WS send)", message);
-      return;
-    }
-
-    if (!this.ws) {
-      console.warn("[app] Cannot send – WebSocket not initialized", message);
-      return;
-    }
-    if (this.ws.readyState !== WebSocket.OPEN) {
-      console.warn("[app] Cannot send – readyState=", this.ws.readyState, message);
-      return;
-    }
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
 
     this.ws.send(JSON.stringify(message));
   }
@@ -172,9 +124,5 @@ export class CollaborationWebSocket {
       } catch {}
       this.ws = null;
     }
-  }
-
-  enableRealWebSocket() {
-    this.isSimulated = false;
   }
 }

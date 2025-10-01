@@ -96,7 +96,6 @@ export function useCollaboration({
           pendingPositionsRef.current[id] = payload[id]
         }
       }
-      console.error('[collab] error guardando posiciones bulk', e)
     } finally {
       saveInFlightRef.current = false
     }
