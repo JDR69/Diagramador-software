@@ -139,14 +139,14 @@ export class DiagramExporter {
       x: fromPoint.x + (toPoint.x - fromPoint.x) * 0.2,
       y: fromPoint.y + (toPoint.y - fromPoint.y) * 0.2 - 5,
     }
-    ctx.fillText(relationship.fromCardinality, fromLabelPos.x, fromLabelPos.y)
+    ctx.fillText(relationship.cardinality?.from || "1", fromLabelPos.x, fromLabelPos.y)
 
     // To cardinality
     const toLabelPos = {
       x: fromPoint.x + (toPoint.x - fromPoint.x) * 0.8,
       y: fromPoint.y + (toPoint.y - fromPoint.y) * 0.8 - 5,
     }
-    ctx.fillText(relationship.toCardinality, toLabelPos.x, toLabelPos.y)
+    ctx.fillText(relationship.cardinality?.to || "1", toLabelPos.x, toLabelPos.y)
 
     // Draw relationship type label
     const midPoint = {
@@ -254,8 +254,8 @@ export class DiagramExporter {
             y: fromPoint.y + (toPoint.y - fromPoint.y) * 0.8 - 5,
           }
 
-          svgContent += `<text x="${fromLabelPos.x}" y="${fromLabelPos.y}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="11" fill="#6366f1">${relationship.fromCardinality}</text>\n`
-          svgContent += `<text x="${toLabelPos.x}" y="${toLabelPos.y}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="11" fill="#6366f1">${relationship.toCardinality}</text>\n`
+          svgContent += `<text x="${fromLabelPos.x}" y="${fromLabelPos.y}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="11" fill="#6366f1">${relationship.cardinality?.from || "1"}</text>\n`
+          svgContent += `<text x="${toLabelPos.x}" y="${toLabelPos.y}" textAnchor="middle" fontFamily="system-ui, -apple-system, sans-serif" fontSize="11" fill="#6366f1">${relationship.cardinality?.to || "1"}</text>\n`
 
  
           const midPoint = {
@@ -345,6 +345,12 @@ export class DiagramExporter {
 
     // Generate main application class
     projectStructure["src/main/java/com/example/demo/DemoApplication.java"] = this.generateMainApplication()
+
+    // Generate Postman collection
+    projectStructure["postman/API_Collection.postman_collection.json"] = this.generatePostmanCollection(classes)
+
+    // Generate API documentation
+    projectStructure["API_DOCUMENTATION.md"] = this.generateAPIDocumentation(classes)
 
     return projectStructure
   }
@@ -446,12 +452,12 @@ public class ${classData.name} {
       )
 
       if (relatedClass && relatedClass.id !== classData.id) {
-        if (rel.type === "one-to-many") {
+        if (rel.type === "composition" || rel.type === "aggregation") {
           entityClass += `    @OneToMany(mappedBy = "${classData.name.toLowerCase()}")
     private List<${relatedClass.name}> ${relatedClass.name.toLowerCase()}List;
     
 `
-        } else if (rel.type === "many-to-one") {
+        } else if (rel.type === "association") {
           entityClass += `    @ManyToOne
     @JoinColumn(name = "${relatedClass.name.toLowerCase()}_id")
     private ${relatedClass.name} ${relatedClass.name.toLowerCase()};
@@ -607,5 +613,288 @@ public class DemoApplication {
         SpringApplication.run(DemoApplication.class, args);
     }
 }`
+  }
+
+  private static generatePostmanCollection(classes: ClassData[]): string {
+    const collection = {
+      info: {
+        name: "API Generated from UML Diagram",
+        description: "Colección de APIs generada automáticamente desde el diagrama UML",
+        schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+      },
+      variable: [
+        {
+          key: "baseUrl",
+          value: "http://localhost:8080",
+          type: "string"
+        }
+      ],
+      item: [] as any[]
+    }
+
+    classes.forEach((classData) => {
+      const className = classData.name
+      const classLower = className.toLowerCase()
+      
+      // Crear carpeta para cada entidad
+      const entityFolder = {
+        name: className,
+        item: [
+          // GET All
+          {
+            name: `Get All ${className}`,
+            request: {
+              method: "GET",
+              header: [
+                {
+                  key: "Content-Type",
+                  value: "application/json"
+                }
+              ],
+              url: {
+                raw: "{{baseUrl}}/api/" + classLower,
+                host: ["{{baseUrl}}"],
+                path: ["api", classLower]
+              }
+            },
+            response: []
+          },
+          // GET by ID
+          {
+            name: `Get ${className} by ID`,
+            request: {
+              method: "GET",
+              header: [
+                {
+                  key: "Content-Type",
+                  value: "application/json"
+                }
+              ],
+              url: {
+                raw: "{{baseUrl}}/api/" + classLower + "/1",
+                host: ["{{baseUrl}}"],
+                path: ["api", classLower, "1"]
+              }
+            },
+            response: []
+          },
+          // POST Create
+          {
+            name: `Create ${className}`,
+            request: {
+              method: "POST",
+              header: [
+                {
+                  key: "Content-Type",
+                  value: "application/json"
+                }
+              ],
+              body: {
+                mode: "raw",
+                raw: JSON.stringify(this.generateSampleData(classData), null, 2)
+              },
+              url: {
+                raw: "{{baseUrl}}/api/" + classLower,
+                host: ["{{baseUrl}}"],
+                path: ["api", classLower]
+              }
+            },
+            response: []
+          },
+          // PUT Update
+          {
+            name: `Update ${className}`,
+            request: {
+              method: "PUT",
+              header: [
+                {
+                  key: "Content-Type",
+                  value: "application/json"
+                }
+              ],
+              body: {
+                mode: "raw",
+                raw: JSON.stringify({...this.generateSampleData(classData), id: 1}, null, 2)
+              },
+              url: {
+                raw: "{{baseUrl}}/api/" + classLower + "/1",
+                host: ["{{baseUrl}}"],
+                path: ["api", classLower, "1"]
+              }
+            },
+            response: []
+          },
+          // DELETE
+          {
+            name: `Delete ${className}`,
+            request: {
+              method: "DELETE",
+              header: [
+                {
+                  key: "Content-Type",
+                  value: "application/json"
+                }
+              ],
+              url: {
+                raw: "{{baseUrl}}/api/" + classLower + "/1",
+                host: ["{{baseUrl}}"],
+                path: ["api", classLower, "1"]
+              }
+            },
+            response: []
+          }
+        ]
+      }
+
+      collection.item.push(entityFolder)
+    })
+
+    return JSON.stringify(collection, null, 2)
+  }
+
+  private static generateSampleData(classData: ClassData): any {
+    const sampleData: any = {}
+    
+    classData.attributes.forEach((attr) => {
+      const attrLower = attr.toLowerCase()
+      
+      // Generar datos de ejemplo basados en el nombre del atributo
+      if (attrLower.includes('name') || attrLower.includes('nombre')) {
+        sampleData[attr] = `Sample ${attr}`
+      } else if (attrLower.includes('email') || attrLower.includes('correo')) {
+        sampleData[attr] = "sample@example.com"
+      } else if (attrLower.includes('phone') || attrLower.includes('telefono')) {
+        sampleData[attr] = "+591 12345678"
+      } else if (attrLower.includes('date') || attrLower.includes('fecha')) {
+        sampleData[attr] = "2023-12-01"
+      } else if (attrLower.includes('price') || attrLower.includes('precio') || attrLower.includes('cost') || attrLower.includes('amount')) {
+        sampleData[attr] = "99.99"
+      } else if (attrLower.includes('status') || attrLower.includes('estado')) {
+        sampleData[attr] = "ACTIVE"
+      } else {
+        sampleData[attr] = `Sample ${attr}`
+      }
+    })
+    
+    return sampleData
+  }
+
+  private static generateAPIDocumentation(classes: ClassData[]): string {
+    let doc = `# API Documentation
+# Documentación de API generada desde Diagrama UML
+
+## Información General
+- **Base URL**: \`http://localhost:8080\`
+- **Content-Type**: \`application/json\`
+- **Framework**: Spring Boot 3.2.0
+- **Database**: H2 (In-Memory)
+
+## Endpoints Disponibles
+
+`
+
+    classes.forEach((classData) => {
+      const className = classData.name
+      const classLower = className.toLowerCase()
+      
+      doc += `### ${className}\n\n`
+      
+      // GET All
+      doc += `#### 1. Obtener todos los ${className}\n`
+      doc += `\`\`\`http\n`
+      doc += `GET /api/${classLower}\n`
+      doc += `\`\`\`\n\n`
+      doc += `**Respuesta:**\n`
+      doc += `\`\`\`json\n`
+      doc += `[\n`
+      doc += `  ${JSON.stringify({id: 1, ...this.generateSampleData(classData)}, null, 2).replace(/^/gm, '  ')}\n`
+      doc += `]\n`
+      doc += `\`\`\`\n\n`
+      
+      // GET by ID
+      doc += `#### 2. Obtener ${className} por ID\n`
+      doc += `\`\`\`http\n`
+      doc += `GET /api/${classLower}/{id}\n`
+      doc += `\`\`\`\n\n`
+      doc += `**Parámetros:**\n`
+      doc += `- \`id\` (path): ID del ${className}\n\n`
+      doc += `**Respuesta:**\n`
+      doc += `\`\`\`json\n`
+      doc += JSON.stringify({id: 1, ...this.generateSampleData(classData)}, null, 2)
+      doc += `\n\`\`\`\n\n`
+      
+      // POST Create
+      doc += `#### 3. Crear nuevo ${className}\n`
+      doc += `\`\`\`http\n`
+      doc += `POST /api/${classLower}\n`
+      doc += `Content-Type: application/json\n`
+      doc += `\`\`\`\n\n`
+      doc += `**Body:**\n`
+      doc += `\`\`\`json\n`
+      doc += JSON.stringify(this.generateSampleData(classData), null, 2)
+      doc += `\n\`\`\`\n\n`
+      doc += `**Respuesta:**\n`
+      doc += `\`\`\`json\n`
+      doc += JSON.stringify({id: 1, ...this.generateSampleData(classData)}, null, 2)
+      doc += `\n\`\`\`\n\n`
+      
+      // PUT Update
+      doc += `#### 4. Actualizar ${className}\n`
+      doc += `\`\`\`http\n`
+      doc += `PUT /api/${classLower}/{id}\n`
+      doc += `Content-Type: application/json\n`
+      doc += `\`\`\`\n\n`
+      doc += `**Parámetros:**\n`
+      doc += `- \`id\` (path): ID del ${className} a actualizar\n\n`
+      doc += `**Body:**\n`
+      doc += `\`\`\`json\n`
+      doc += JSON.stringify(this.generateSampleData(classData), null, 2)
+      doc += `\n\`\`\`\n\n`
+      
+      // DELETE
+      doc += `#### 5. Eliminar ${className}\n`
+      doc += `\`\`\`http\n`
+      doc += `DELETE /api/${classLower}/{id}\n`
+      doc += `\`\`\`\n\n`
+      doc += `**Parámetros:**\n`
+      doc += `- \`id\` (path): ID del ${className} a eliminar\n\n`
+      doc += `**Respuesta:**\n`
+      doc += `- \`200 OK\`: Eliminado exitosamente\n`
+      doc += `- \`404 Not Found\`: ${className} no encontrado\n\n`
+      
+      doc += `---\n\n`
+    })
+
+    doc += `## Instrucciones de Uso
+
+### 1. Ejecutar el Proyecto
+\`\`\`bash
+mvn spring-boot:run
+\`\`\`
+
+### 2. Acceder a la Base de Datos H2
+- URL: http://localhost:8080/h2-console
+- JDBC URL: \`jdbc:h2:mem:testdb\`
+- Usuario: \`sa\`
+- Contraseña: \`password\`
+
+### 3. Importar Colección en Postman
+1. Abrir Postman
+2. Hacer clic en "Import"
+3. Seleccionar el archivo \`postman/API_Collection.postman_collection.json\`
+4. La variable \`baseUrl\` está configurada como \`http://localhost:8080\`
+
+### 4. Códigos de Respuesta HTTP
+- \`200 OK\`: Operación exitosa
+- \`201 Created\`: Recurso creado exitosamente
+- \`404 Not Found\`: Recurso no encontrado
+- \`400 Bad Request\`: Datos inválidos en la petición
+- \`500 Internal Server Error\`: Error interno del servidor
+
+---
+**Nota**: Esta documentación fue generada automáticamente desde el diagrama UML.
+`
+
+    return doc
   }
 }
