@@ -1,271 +1,117 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import { groq } from "@ai-sdk/groq"
+import { type NextRequest, NextResponse } from 'next/server'
+import { generateText } from 'ai'
+import { groq } from '@ai-sdk/groq'
 
-// Función para generar diagramas predefinidos como fallback
-function generateFallbackDiagram(dominio: string) {
-  const templates: Record<string, any> = {
-    hospital: {
-      classes: [
-        { name: "Paciente", attributes: ["id", "nombre", "fechaNacimiento", "telefono", "email"] },
-        { name: "Doctor", attributes: ["id", "nombre", "especialidad", "telefono", "email"] },
-        { name: "Enfermero", attributes: ["id", "nombre", "turno", "departamento"] },
-        { name: "Consulta", attributes: ["id", "fecha", "diagnostico", "tratamiento"] },
-        { name: "Habitacion", attributes: ["id", "numero", "tipo", "estado", "precio"] },
-        { name: "Departamento", attributes: ["id", "nombre", "jefe", "presupuesto"] },
-        { name: "HistorialMedico", attributes: ["id", "fecha", "observaciones", "medicamentos"] },
-        { name: "Factura", attributes: ["id", "fecha", "monto", "estado", "metodoPago"] }
-      ],
-      relationships: [
-        { from: "Paciente", to: "Consulta", type: "association", name: "consultas", cardinality: { from: "1", to: "*" } },
-        { from: "Doctor", to: "Consulta", type: "association", name: "atiende", cardinality: { from: "1", to: "*" } },
-        { from: "Paciente", to: "HistorialMedico", type: "composition", name: "historial", cardinality: { from: "1", to: "1" } },
-        { from: "Paciente", to: "Habitacion", type: "association", name: "alojadoEn", cardinality: { from: "0..1", to: "*" } },
-        { from: "Doctor", to: "Departamento", type: "aggregation", name: "perteneceA", cardinality: { from: "*", to: "1" } },
-        { from: "Enfermero", to: "Departamento", type: "aggregation", name: "adscritoA", cardinality: { from: "*", to: "1" } },
-        { from: "Consulta", to: "Factura", type: "association", name: "genera", cardinality: { from: "1", to: "0..1" } }
-      ]
-    },
-    universidad: {
-      classes: [
-        { name: "Estudiante", attributes: ["id", "nombre", "email", "carrera", "semestre"] },
-        { name: "Profesor", attributes: ["id", "nombre", "email", "departamento", "grado"] },
-        { name: "Curso", attributes: ["id", "nombre", "codigo", "creditos", "semestre"] },
-        { name: "Inscripcion", attributes: ["id", "fecha", "calificacion", "estado"] },
-        { name: "Departamento", attributes: ["id", "nombre", "jefe", "presupuesto"] },
-        { name: "Aula", attributes: ["id", "numero", "capacidad", "tipo", "edificio"] },
-        { name: "Horario", attributes: ["id", "horaInicio", "horaFin", "dia", "semestre"] },
-        { name: "Carrera", attributes: ["id", "nombre", "duracion", "creditos", "modalidad"] }
-      ],
-      relationships: [
-        { from: "Estudiante", to: "Inscripcion", type: "association", name: "inscripciones", cardinality: { from: "1", to: "*" } },
-        { from: "Curso", to: "Inscripcion", type: "association", name: "matriculas", cardinality: { from: "1", to: "*" } },
-        { from: "Profesor", to: "Curso", type: "association", name: "imparte", cardinality: { from: "1", to: "*" } },
-        { from: "Estudiante", to: "Carrera", type: "association", name: "cursa", cardinality: { from: "*", to: "1" } },
-        { from: "Profesor", to: "Departamento", type: "aggregation", name: "adscritoA", cardinality: { from: "*", to: "1" } },
-        { from: "Curso", to: "Horario", type: "composition", name: "horario", cardinality: { from: "1", to: "1..*" } },
-        { from: "Horario", to: "Aula", type: "association", name: "dictadoEn", cardinality: { from: "*", to: "1" } }
-      ]
-    }
-  }
-
-  // Usar template específico o genérico
-  const template = templates[dominio.toLowerCase()] || {
+// Fallback sencillo si el modelo no devuelve JSON válido
+function generateFallbackDiagram(domain: string) {
+  const base = (s: string) => s.trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('')
+  const root = base(domain || 'Sistema')
+  return {
     classes: [
-      { name: "Usuario", attributes: ["id", "nombre", "email", "fechaCreacion"] },
-      { name: "Producto", attributes: ["id", "nombre", "precio", "categoria"] },
-      { name: "Pedido", attributes: ["id", "fecha", "total", "estado"] },
-      { name: "Categoria", attributes: ["id", "nombre", "descripcion"] },
-      { name: "Direccion", attributes: ["id", "calle", "ciudad", "codigoPostal"] },
-      { name: "Pago", attributes: ["id", "monto", "metodoPago", "fecha"] },
-      { name: "Inventario", attributes: ["id", "cantidad", "ubicacion"] },
-      { name: "Factura", attributes: ["id", "numero", "fecha", "impuestos"] }
+      { name: `${root}Principal`, attributes: ['id','nombre','estado'] },
+      { name: `${root}Item`, attributes: ['id','codigo','descripcion'] },
+      { name: `${root}Usuario`, attributes: ['id','nombre','email'] },
+      { name: `${root}Transaccion`, attributes: ['id','fecha','monto'] }
     ],
     relationships: [
-      { from: "Usuario", to: "Pedido", type: "association", name: "realiza", cardinality: { from: "1", to: "*" } },
-      { from: "Pedido", to: "Producto", type: "association", name: "incluye", cardinality: { from: "1", to: "*" } },
-      { from: "Producto", to: "Categoria", type: "association", name: "perteneceA", cardinality: { from: "*", to: "1" } },
-      { from: "Usuario", to: "Direccion", type: "aggregation", name: "tiene", cardinality: { from: "1", to: "1..*" } },
-      { from: "Pedido", to: "Pago", type: "association", name: "pago", cardinality: { from: "1", to: "1" } },
-      { from: "Producto", to: "Inventario", type: "composition", name: "stock", cardinality: { from: "1", to: "1" } },
-      { from: "Pedido", to: "Factura", type: "association", name: "factura", cardinality: { from: "1", to: "0..1" } }
+      { from: `${root}Principal`, to: `${root}Item`, type: 'composition', name: 'contieneItems', cardinality: { from: '1', to: '*' } },
+      { from: `${root}Usuario`, to: `${root}Transaccion`, type: 'association', name: 'realizaTransacciones', cardinality: { from: '1', to: '*' } },
+      { from: `${root}Principal`, to: `${root}Usuario`, type: 'aggregation', name: 'gestionaUsuarios', cardinality: { from: '1', to: '*' } }
     ]
   }
-
-  return template
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, diagramId } = await request.json()
-    console.log("📨 Received message:", message)
-    if (!message || typeof message !== "string") {
-      return NextResponse.json({ error: "No message provided" }, { status: 400 })
+    const { message } = await request.json()
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ error: 'No message provided' }, { status: 400 })
     }
 
-    // Detectar comandos simples en español
     const actions: any[] = []
-    let shortResponse = ""
-    const addClassMatch = message.match(/añadir clase ([a-zA-Z0-9_]+)/i)
-    if (addClassMatch) {
-      actions.push({ type: "add_class", data: { name: addClassMatch[1] } })
-      shortResponse = `Clase "${addClassMatch[1]}" añadida.`
+    // Comandos simples
+    const mAdd = message.match(/añadir clase ([a-zA-Z0-9_]+)/i)
+    if (mAdd) {
+      actions.push({ type: 'add_class', data: { name: mAdd[1] } })
+      return NextResponse.json({ response: `Clase ${mAdd[1]} añadida.`, actions })
     }
-    const connectMatch = message.match(/conectar ([a-zA-Z0-9_]+) con ([a-zA-Z0-9_]+)/i)
-    if (connectMatch) {
-      actions.push({ type: "add_relationship", data: { from: connectMatch[1], to: connectMatch[2], type: "association" } })
-      shortResponse = `Relación creada entre "${connectMatch[1]}" y "${connectMatch[2]}".`
+    const mRel = message.match(/conectar ([a-zA-Z0-9_]+) con ([a-zA-Z0-9_]+)/i)
+    if (mRel) {
+      actions.push({ type: 'add_relationship', data: { from: mRel[1], to: mRel[2], type: 'association' } })
+      return NextResponse.json({ response: 'Relación creada.', actions })
     }
-    const addAttrMatch = message.match(/agregar atributo ([a-zA-Z0-9_]+) a ([a-zA-Z0-9_]+)/i)
-    if (addAttrMatch) {
-      actions.push({ type: "add_attribute", data: { className: addAttrMatch[2], attribute: addAttrMatch[1] } })
-      shortResponse = `Atributo "${addAttrMatch[1]}" añadido a "${addAttrMatch[2]}".`
+    const mAttr = message.match(/agregar atributo ([a-zA-Z0-9_]+) a ([a-zA-Z0-9_]+)/i)
+    if (mAttr) {
+      actions.push({ type: 'add_attribute', data: { className: mAttr[2], attribute: mAttr[1] } })
+      return NextResponse.json({ response: 'Atributo añadido.', actions })
     }
 
-    // -------------------------------------------------------
-    // NUEVO: Prompt extenso personalizado
-    // Formatos aceptados (ejemplos):
-    // "diagrama: sistema para gestionar un hotel con reservas, clientes ... (hasta 500 chars)"
-    // "crear diagrama: plataforma educativa con ..."
-    // "crear diagrama personalizado: ..."
-    // Puede incluir pistas como: "8 clases", "incluir herencia", "usar composición para ..."
-    // -------------------------------------------------------
-    const longPromptMatch = message.match(/^(?:crear\s+)?diagrama(?:\s+personalizado)?\s*:\s*([\s\S]{50,800})/i)
-    if (longPromptMatch) {
-      const userSpecRaw = longPromptMatch[1].trim()
-      const userSpec = userSpecRaw.slice(0, 850) // hard cap
-
-      // Detectar número deseado de clases si se menciona (ej: "8 clases" / "10 classes")
-      const countMatch = userSpec.match(/(\d{1,2})\s*(?:clases|classes)/i)
-      const targetClasses = countMatch ? Math.min(parseInt(countMatch[1], 10), 20) : 8
-
-      const advancedPrompt = `Eres un generador de diagramas UML de clases. A partir de la especificación del usuario genera SOLO JSON válido.
-Especificación del usuario (en español): """${userSpec}"""
-Requisitos:
-- Aproximadamente ${targetClasses} clases (5 mínimo, 20 máximo).
-- Cada clase: name (CamelCase), attributes (entre 3 y 8, siempre incluir "id" como primer atributo), evita atributos duplicados.
-- Usa tipos de relación variados: association, aggregation, composition, inheritance (solo si hay jerarquías claras), y opcionalmente alguna dependencia si procede.
-- Incluir nombre semántico de relación (camelCase) y cardinalidad {from, to} usando valores: 1, 0..1, *, 1..*, 0..*, 1..n si aplica.
-- No repitas relaciones inversas duplicadas.
-- Si hay herencia: NO repitas atributos del padre en el hijo.
-- Sin explicación, sin texto extra, SOLO JSON.
-Formato EXACTO:
-{
-  "classes": [ { "name": "Nombre", "attributes": ["id", "campo1", "campo2"] } ],
-  "relationships": [ { "from": "ClaseA", "to": "ClaseB", "type": "association", "name": "nombreRelacion", "cardinality": { "from": "1", "to": "*" } } ]
-}
-Prohibido incluir comentarios, markdown o texto fuera del JSON.`
-
-      const { text } = await generateText({
-        model: groq("llama-3.1-8b-instant"),
-        prompt: advancedPrompt,
-      })
-
-      let diagram
+    // Prompt extendido con ':'
+    const longMatch = message.match(/^(?:crear\s+|crea\s+)?diagrama(?:\s+personalizado)?\s*:\s*([\s\S]{20,1000})$/i)
+    if (longMatch) {
+      const specRaw = longMatch[1].trim().slice(0, 900)
+      const countMatch = specRaw.match(/(\d{1,2})\s*(?:clases|classes)/i)
+      const target = countMatch ? Math.min(parseInt(countMatch[1], 10), 20) : 8
+      const prompt = `Genera SOLO JSON de un diagrama UML según: "${specRaw}"\nReglas: ${target} clases aprox, atributos (id + 2-6 más), relaciones con type/name/cardinality, sin texto extra. Formato: {"classes":[{"name":"X","attributes":["id","campo"]}],"relationships":[{"from":"A","to":"B","type":"association","name":"rel","cardinality":{"from":"1","to":"*"}}]}`
+      const { text } = await generateText({ model: groq('llama-3.1-8b-instant'), prompt })
+      let diagram: any
       try {
-        const clean = text.trim().replace(/```json|```/g, '').trim()
-        diagram = JSON.parse(clean)
-      } catch (e) {
-        // fallback simple basado en especificación: crear clases por palabras clave sustantivas (>4 letras)
-        const keywords = Array.from(new Set(userSpec.split(/[^a-zA-Záéíóúüñ0-9]+/g)
-          .filter(w => w.length > 4)
-          .slice(0, targetClasses)))
-        diagram = {
-          classes: keywords.map(k => ({ name: k.charAt(0).toUpperCase() + k.slice(1), attributes: ["id","nombre","estado"] })),
-          relationships: []
-        }
+        diagram = JSON.parse(text.trim().replace(/```json|```/g, '').trim())
+      } catch {
+        const words = Array.from(new Set(specRaw.split(/[^a-zA-Záéíóúüñ0-9]+/).filter(w => w.length > 4))).slice(0, target)
+        diagram = { classes: words.map(w => ({ name: w[0].toUpperCase() + w.slice(1), attributes: ['id', 'nombre', 'estado'] })), relationships: [] }
       }
-
-      if (diagram?.classes?.length) {
-        diagram.classes.forEach((cls: any) => {
-          actions.push({ type: "add_class", data: { name: cls.name } })
-          if (Array.isArray(cls.attributes)) {
-            cls.attributes.forEach((attr: string) => {
-              actions.push({ type: "add_attribute", data: { className: cls.name, attribute: attr } })
-            })
-          }
+      if (diagram?.classes) {
+        diagram.classes.forEach((c: any) => {
+          actions.push({ type: 'add_class', data: { name: c.name } })
+          if (Array.isArray(c.attributes)) c.attributes.forEach((a: string) => actions.push({ type: 'add_attribute', data: { className: c.name, attribute: a } }))
         })
         if (Array.isArray(diagram.relationships)) {
-          diagram.relationships.forEach((rel: any) => {
-            if (rel?.from && rel?.to) {
-              actions.push({ type: "add_relationship", data: {
-                from: rel.from,
-                to: rel.to,
-                type: rel.type || "association",
-                cardinality: rel.cardinality || { from: "1", to: "1" },
-                name: rel.name || `${rel.from}_${rel.to}`
-              } })
-            }
+          diagram.relationships.forEach((r: any) => {
+            if (r?.from && r?.to) actions.push({ type: 'add_relationship', data: { from: r.from, to: r.to, type: r.type || 'association', cardinality: r.cardinality || { from: '1', to: '1' }, name: r.name || `${r.from}_${r.to}` } })
           })
         }
-        return NextResponse.json({ response: "Diagrama generado (prompt extendido).", actions, diagram })
       }
-      return NextResponse.json({ response: "No se pudo generar diagrama desde el prompt extendido.", actions: [] })
+      return NextResponse.json({ response: 'Diagrama generado.', actions, diagram })
     }
 
-    // Nuevo: Generar diagrama de clases para cualquier dominio (regex más flexible)
-  const diagramaMatch = message.match(/crear(?:\s+un)?\s+diagrama(?:\s+de)?\s+([a-zA-Z0-9áéíóúüñ ]+)/i)
-    console.log("🔍 Checking diagram pattern:", diagramaMatch)
-    if (diagramaMatch) {
-      const dominio = diagramaMatch[1].trim()
-      console.log("🎯 Detected domain:", dominio)
-      const prompt = `Genera un diagrama de clases para un sistema de ${dominio} con ~8 clases.
-Responde SOLO JSON válido (sin comentarios ni texto extra) siguiendo exactamente este esquema:
-{
-  "classes": [ { "name": "Nombre", "attributes": ["id", "campo1", "campo2"] } ],
-  "relationships": [ { "from": "ClaseA", "to": "ClaseB", "type": "association|aggregation|composition|inheritance", "name": "nombreRelacion", "cardinality": { "from": "1|0..1|*|1..*", "to": "1|0..1|*|1..*" } } ]
-}
-Reglas:
-- Variar "type" (usa varios distintos si tiene sentido).
-- Incluir cardinalidad coherente en ambos extremos.
-- El nombre de relación (name) en camelCase y semántico.
-- Atributos deben incluir siempre "id" y otros relevantes.
-Si alguna relación es jerárquica usa "inheritance" (solo si aplica).`
-      
-      console.log("🤖 Sending prompt to AI:", prompt)
-      const { text } = await generateText({
-        model: groq("llama-3.1-8b-instant"),
-        prompt,
-      })
-      console.log("🤖 AI Raw response:", text)
-      
-      let diagram
+    // Comando corto "crear diagrama ..."
+    const shortMatch = message.match(/^(?:crear|crea|generar|genera)\s+(?:un\s+)?diagrama(?:\s+de)?\s+([^\n]{3,200})/i)
+    if (shortMatch) {
+      const domainRaw = shortMatch[1].split(/\.|\n/)[0].trim()
+      const countMatch = domainRaw.match(/(\d{1,2})\s*(?:clases|classes)/i)
+      const target = countMatch ? Math.min(parseInt(countMatch[1], 10), 20) : 8
+      const cleaned = domainRaw.replace(/[,;]+/g, ' ').replace(/[^a-zA-Z0-9áéíóúüñ ]/g, ' ').replace(/\s+/g, ' ').trim()
+      const prompt = `JSON UML para: ${cleaned}. ${target} clases aprox. Formato compacto sin texto extra. {"classes":[{"name":"X","attributes":["id","nombre"]}],"relationships":[{"from":"A","to":"B","type":"association","name":"rel","cardinality":{"from":"1","to":"*"}}]}`
+      const { text } = await generateText({ model: groq('llama-3.1-8b-instant'), prompt })
+      let diagram: any
       try {
-        // Limpiar la respuesta antes de parsear
-        const cleanText = text.trim().replace(/```json|```/g, '').trim()
-        console.log("🧹 Cleaned text:", cleanText)
-        diagram = JSON.parse(cleanText)
-        console.log("✅ Parsed diagram:", diagram)
-      } catch (error) {
-  console.error("❌ JSON Parse error, usando fallback silencioso")
-        // Fallback: crear diagrama predefinido para el dominio
-        diagram = generateFallbackDiagram(dominio)
-        console.log("🛡️ Fallback diagram:", diagram)
+        diagram = JSON.parse(text.trim().replace(/```json|```/g, '').trim())
+      } catch {
+        diagram = generateFallbackDiagram(cleaned || 'Sistema')
       }
-      // Construir acciones para frontend
-      if (diagram && diagram.classes && diagram.relationships) {
-        console.log("🔧 Building actions from diagram...")
-        diagram.classes.forEach((cls: any) => {
-          actions.push({ type: "add_class", data: { name: cls.name } })
-          if (Array.isArray(cls.attributes)) {
-            cls.attributes.forEach((attr: string) => {
-              actions.push({ type: "add_attribute", data: { className: cls.name, attribute: attr } })
-            })
-          }
+      if (diagram?.classes) {
+        diagram.classes.forEach((c: any) => {
+          actions.push({ type: 'add_class', data: { name: c.name } })
+          if (Array.isArray(c.attributes)) c.attributes.forEach((a: string) => actions.push({ type: 'add_attribute', data: { className: c.name, attribute: a } }))
         })
-        diagram.relationships.forEach((rel: any) => {
-          actions.push({ 
-            type: "add_relationship", 
-            data: { 
-              from: rel.from, 
-              to: rel.to, 
-              type: rel.type || "association",
-              cardinality: rel.cardinality || { from: "1", to: "1" },
-              name: rel.name || `${rel.from}_${rel.to}`
-            } 
+        if (Array.isArray(diagram.relationships)) {
+          diagram.relationships.forEach((r: any) => {
+            if (r?.from && r?.to) actions.push({ type: 'add_relationship', data: { from: r.from, to: r.to, type: r.type || 'association', cardinality: r.cardinality || { from: '1', to: '1' }, name: r.name || `${r.from}_${r.to}` } })
           })
-        })
-        console.log("🎯 Final actions array:", actions)
-        return NextResponse.json({ response: `Diagrama de ${dominio} generado automáticamente.`, actions, diagram })
-      } else {
-        return NextResponse.json({ response: `No se pudo generar diagrama para "${dominio}". Intenta reformular.`, actions: [] })
+        }
       }
+      return NextResponse.json({ response: 'Diagrama generado.', actions, diagram })
     }
 
-    // Si hay acción, responder corto
-    if (actions.length > 0) {
-      return NextResponse.json({ response: shortResponse, actions })
-    }
-
-    // Si no hay acción, usar Groq
-    const prompt = message
-    const { text } = await generateText({
-      model: groq("llama-3.1-8b-instant"),
-      prompt,
-    })
-    return NextResponse.json({ response: text, actions })
-  } catch (error: any) {
-    console.error("Error in AI chat endpoint:", error)
-    return NextResponse.json({ error: "Error processing AI chat" }, { status: 500 })
+    // Respuesta corta para cualquier otro mensaje (máx 3 líneas / 220 chars)
+    const { text } = await generateText({ model: groq('llama-3.1-8b-instant'), prompt: message.slice(0, 500) })
+    let trimmed = text.replace(/```[a-zA-Z]*|```/g, '').trim()
+    const lines = trimmed.split(/\r?\n/).slice(0, 3)
+    trimmed = lines.join('\n')
+    if (trimmed.length > 220) trimmed = trimmed.slice(0, 217) + '...'
+    return NextResponse.json({ response: trimmed, actions })
+  } catch (e) {
+    return NextResponse.json({ error: 'Error processing AI chat' }, { status: 500 })
   }
 }
