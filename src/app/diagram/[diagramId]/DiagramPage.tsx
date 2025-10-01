@@ -128,65 +128,63 @@ export default function DiagramPage() {
     [broadcastCursorMove],
   )
 
-  const handleAIAction = (action: any) => {
-    console.log("📋 DiagramPage - Received action:", action)
-    if (!action || !action.type) {
-      console.log("❌ Action is missing or has no type")
-      return
-    }
-    
-    if (action.type === "add_class" && action.data?.name) {
-      console.log("➕ Adding class:", action.data.name)
-      // Evitar duplicados
-      if (!classes.some(cls => cls.name === action.data.name)) {
-        const newClasses = [
-          ...classes,
-          {
-            id: `class-${Date.now()}`,
-            name: action.data.name,
-            attributes: [],
-            position: { x: 100 + classes.length * 50, y: 100 + classes.length * 50 },
-          },
-        ]
-        console.log("✅ Class added successfully, new classes:", newClasses)
-        handleClassesChange(newClasses) // ✅ Usar handleClassesChange para activar WebSocket
-      } else {
-        console.log("⚠️ Class already exists, skipping")
+  // Mantenemos compatibilidad si se envía acción individual
+  const handleAIAction = (action: any) => handleAIActions([action])
+
+  // Nuevo: procesamiento batch para que relaciones vean las clases recién creadas
+  const handleAIActions = (actions: any[]) => {
+    if (!actions || actions.length === 0) return
+    let newClasses = [...classes]
+    const nameToId = new Map(newClasses.map(c => [c.name, c.id]))
+
+    // 1. Crear clases primero
+    actions.filter(a => a.type === 'add_class' && a.data?.name).forEach(a => {
+      const name = a.data.name
+      if (!nameToId.has(name)) {
+        const cls = {
+          id: `class-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+          name,
+          attributes: [] as string[],
+          position: { x: 100 + newClasses.length * 60, y: 100 + newClasses.length * 60 },
+        }
+        newClasses.push(cls)
+        nameToId.set(name, cls.id)
       }
+    })
+
+    // 2. Agregar atributos
+    const attributeActions = actions.filter(a => a.type === 'add_attribute' && a.data?.className && a.data?.attribute)
+    if (attributeActions.length) {
+      newClasses = newClasses.map(cls => {
+        const adds = attributeActions
+          .filter(a => a.data.className === cls.name && !cls.attributes.includes(a.data.attribute))
+          .map(a => a.data.attribute)
+        return adds.length ? { ...cls, attributes: [...cls.attributes, ...adds] } : cls
+      })
     }
-    if (action.type === "add_relationship" && action.data?.from && action.data?.to) {
-      console.log("🔗 Adding relationship from", action.data.from, "to", action.data.to)
-      const fromClass = classes.find(cls => cls.name === action.data.from)
-      const toClass = classes.find(cls => cls.name === action.data.to)
-      console.log("🔍 Found fromClass:", fromClass, "toClass:", toClass)
-      if (fromClass && toClass) {
-        const newRelationships = [
-          ...relationships,
-          {
-            id: `rel-${Date.now()}`,
-            from: fromClass.id,
-            to: toClass.id,
-            type: action.data.type || "association",
-            cardinality: { from: "1", to: "1" },
-            name: "relacion",
-          },
-        ]
-        console.log("✅ Relationship added successfully, new relationships:", newRelationships)
-        handleRelationshipsChange(newRelationships) // ✅ Usar handleRelationshipsChange para activar WebSocket
-      } else {
-        console.log("❌ Could not find classes for relationship")
+
+    // 3. Procesar relaciones
+    let newRelationships = [...relationships]
+    actions.filter(a => a.type === 'add_relationship' && a.data?.from && a.data?.to).forEach(a => {
+      const fromId = nameToId.get(a.data.from)
+      const toId = nameToId.get(a.data.to)
+      if (!fromId || !toId) return
+      const exists = newRelationships.some(r => r.from === fromId && r.to === toId && r.type === (a.data.type || 'association'))
+      if (!exists) {
+        newRelationships.push({
+          id: `rel-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+          from: fromId,
+          to: toId,
+            type: a.data.type || 'association',
+            cardinality: { from: '1', to: '1' },
+            name: 'relacion'
+        })
       }
-    }
-    if (action.type === "add_attribute" && action.data?.className && action.data?.attribute) {
-      console.log("📝 Adding attribute", action.data.attribute, "to class", action.data.className)
-      const newClasses = classes.map(cls =>
-        cls.name === action.data.className && !cls.attributes.includes(action.data.attribute)
-          ? { ...cls, attributes: [...cls.attributes, action.data.attribute] }
-          : cls
-      )
-      console.log("✅ Attribute added successfully, updated classes:", newClasses)
-      handleClassesChange(newClasses) // ✅ Usar handleClassesChange para activar WebSocket
-    }
+    })
+
+    // Commit final una sola vez
+    handleClassesChange(newClasses)
+    handleRelationshipsChange(newRelationships)
   }
 
   if (notFound) {
@@ -222,7 +220,7 @@ export default function DiagramPage() {
           />
         </div>
         <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <AIChat diagramId={diagramId} onAIAction={handleAIAction} />
+          <AIChat diagramId={diagramId} onAIAction={handleAIAction} onAIActions={handleAIActions} />
         </div>
       </div>
     </div>

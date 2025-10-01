@@ -13,6 +13,7 @@ import { Mic, Send, Bot, User, MicOff } from "lucide-react"
 interface AIChatProps {
   diagramId: string | null
   onAIAction?: (action: any) => void
+  onAIActions?: (actions: any[]) => void // batch actions
 }
 
 interface Message {
@@ -27,7 +28,7 @@ interface AIAction {
   data: any
 }
 
-export function AIChat({ diagramId, onAIAction }: AIChatProps) {
+export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -95,8 +96,6 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
       }
 
       const data = await response.json()
-      console.log("🤖 AI Response:", data)
-
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "ai",
@@ -106,16 +105,13 @@ export function AIChat({ diagramId, onAIAction }: AIChatProps) {
 
       setMessages((prev) => [...prev, aiMessage])
 
-      if (data.actions && data.actions.length > 0) {
-        console.log("🔧 Processing actions:", data.actions)
-        data.actions.forEach((action: AIAction, index: number) => {
-          console.log(`🎯 Action ${index + 1}:`, action)
-          if (onAIAction) {
-            onAIAction(action)
-          }
-        })
-      } else {
-        console.log("❌ No actions received or actions array is empty")
+      if (Array.isArray(data.actions) && data.actions.length > 0) {
+        // Si hay handler batch usarlo, si no fallback a uno por uno
+        if (onAIActions) {
+          onAIActions(data.actions)
+        } else if (onAIAction) {
+          data.actions.forEach((action: AIAction) => onAIAction(action))
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error)
