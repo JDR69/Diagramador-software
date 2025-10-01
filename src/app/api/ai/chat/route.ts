@@ -102,6 +102,87 @@ export async function POST(request: NextRequest) {
       shortResponse = `Atributo "${addAttrMatch[1]}" añadido a "${addAttrMatch[2]}".`
     }
 
+    // -------------------------------------------------------
+    // NUEVO: Prompt extenso personalizado
+    // Formatos aceptados (ejemplos):
+    // "diagrama: sistema para gestionar un hotel con reservas, clientes ... (hasta 500 chars)"
+    // "crear diagrama: plataforma educativa con ..."
+    // "crear diagrama personalizado: ..."
+    // Puede incluir pistas como: "8 clases", "incluir herencia", "usar composición para ..."
+    // -------------------------------------------------------
+    const longPromptMatch = message.match(/^(?:crear\s+)?diagrama(?:\s+personalizado)?\s*:\s*([\s\S]{50,800})/i)
+    if (longPromptMatch) {
+      const userSpecRaw = longPromptMatch[1].trim()
+      const userSpec = userSpecRaw.slice(0, 850) // hard cap
+
+      // Detectar número deseado de clases si se menciona (ej: "8 clases" / "10 classes")
+      const countMatch = userSpec.match(/(\d{1,2})\s*(?:clases|classes)/i)
+      const targetClasses = countMatch ? Math.min(parseInt(countMatch[1], 10), 20) : 8
+
+      const advancedPrompt = `Eres un generador de diagramas UML de clases. A partir de la especificación del usuario genera SOLO JSON válido.
+Especificación del usuario (en español): """${userSpec}"""
+Requisitos:
+- Aproximadamente ${targetClasses} clases (5 mínimo, 20 máximo).
+- Cada clase: name (CamelCase), attributes (entre 3 y 8, siempre incluir "id" como primer atributo), evita atributos duplicados.
+- Usa tipos de relación variados: association, aggregation, composition, inheritance (solo si hay jerarquías claras), y opcionalmente alguna dependencia si procede.
+- Incluir nombre semántico de relación (camelCase) y cardinalidad {from, to} usando valores: 1, 0..1, *, 1..*, 0..*, 1..n si aplica.
+- No repitas relaciones inversas duplicadas.
+- Si hay herencia: NO repitas atributos del padre en el hijo.
+- Sin explicación, sin texto extra, SOLO JSON.
+Formato EXACTO:
+{
+  "classes": [ { "name": "Nombre", "attributes": ["id", "campo1", "campo2"] } ],
+  "relationships": [ { "from": "ClaseA", "to": "ClaseB", "type": "association", "name": "nombreRelacion", "cardinality": { "from": "1", "to": "*" } } ]
+}
+Prohibido incluir comentarios, markdown o texto fuera del JSON.`
+
+      const { text } = await generateText({
+        model: groq("llama-3.1-8b-instant"),
+        prompt: advancedPrompt,
+      })
+
+      let diagram
+      try {
+        const clean = text.trim().replace(/```json|```/g, '').trim()
+        diagram = JSON.parse(clean)
+      } catch (e) {
+        // fallback simple basado en especificación: crear clases por palabras clave sustantivas (>4 letras)
+        const keywords = Array.from(new Set(userSpec.split(/[^a-zA-Záéíóúüñ0-9]+/g)
+          .filter(w => w.length > 4)
+          .slice(0, targetClasses)))
+        diagram = {
+          classes: keywords.map(k => ({ name: k.charAt(0).toUpperCase() + k.slice(1), attributes: ["id","nombre","estado"] })),
+          relationships: []
+        }
+      }
+
+      if (diagram?.classes?.length) {
+        diagram.classes.forEach((cls: any) => {
+          actions.push({ type: "add_class", data: { name: cls.name } })
+          if (Array.isArray(cls.attributes)) {
+            cls.attributes.forEach((attr: string) => {
+              actions.push({ type: "add_attribute", data: { className: cls.name, attribute: attr } })
+            })
+          }
+        })
+        if (Array.isArray(diagram.relationships)) {
+          diagram.relationships.forEach((rel: any) => {
+            if (rel?.from && rel?.to) {
+              actions.push({ type: "add_relationship", data: {
+                from: rel.from,
+                to: rel.to,
+                type: rel.type || "association",
+                cardinality: rel.cardinality || { from: "1", to: "1" },
+                name: rel.name || `${rel.from}_${rel.to}`
+              } })
+            }
+          })
+        }
+        return NextResponse.json({ response: "Diagrama generado (prompt extendido).", actions, diagram })
+      }
+      return NextResponse.json({ response: "No se pudo generar diagrama desde el prompt extendido.", actions: [] })
+    }
+
     // Nuevo: Generar diagrama de clases para cualquier dominio (regex más flexible)
   const diagramaMatch = message.match(/crear(?:\s+un)?\s+diagrama(?:\s+de)?\s+([a-zA-Z0-9áéíóúüñ ]+)/i)
     console.log("🔍 Checking diagram pattern:", diagramaMatch)
