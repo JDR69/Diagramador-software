@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Mic, Send, Bot, User, MicOff } from "lucide-react"
+import { Mic, Send, Bot, User, MicOff, Pause, Play } from "lucide-react"
 
 interface AIChatProps {
   diagramId: string | null
@@ -43,6 +43,10 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null)
+  const [interimTranscript, setInterimTranscript] = useState("")
+  const [isPaused, setIsPaused] = useState(false)
+  const recognitionRef = useRef<any>(null)
+  const pausedRef = useRef(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -128,6 +132,7 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
   }
 
   const handleVoiceInput = async () => {
+    // Caso 1: No grabando -> iniciar
     if (!isRecording) {
       try {
         if (audioStream) {
@@ -228,21 +233,26 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
         }
         setMessages((prev) => [...prev, errorMessage])
       }
-    } else {
-      if (mediaRecorder && mediaRecorder.state === "recording") {
-        mediaRecorder.stop()
-        setIsRecording(false)
-        setMediaRecorder(null)
+    } else if (isRecording && !isPaused) {
+      // Caso 2: Grabando activo -> pausar (detener recognition pero mantener stream)
+      try {
+        pausedRef.current = true
+        setIsPaused(true)
+        if (recognitionRef.current) {
+          recognitionRef.current.stop()
+        }
+      } catch (e) {
+        console.warn("No se pudo pausar el reconocimiento", e)
       }
-
-      if (audioStream) {
-        audioStream.getTracks().forEach((track) => track.stop())
-        setAudioStream(null)
-      }
+    } else if (isRecording && isPaused) {
+      // Caso 3: Reanudar
+      pausedRef.current = false
+      setIsPaused(false)
+      startSpeechRecognition(true) // reanudar usando el mismo stream
     }
   }
 
-  const startSpeechRecognition = () => {
+  const startSpeechRecognition = (isResume: boolean = false) => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
 
     if (!SpeechRecognition) {
@@ -262,27 +272,36 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
       return
     }
 
-    const recognition = new SpeechRecognition()
+  const recognition = new SpeechRecognition()
+  recognitionRef.current = recognition
 
-    recognition.lang = "es-ES"
-    recognition.continuous = false
-    recognition.interimResults = false
+  recognition.lang = "es-ES"
+  recognition.continuous = true // permitir resultados continuos mientras habla
+  recognition.interimResults = true // mostrar transcripción en vivo
     recognition.maxAlternatives = 1
 
     recognition.onstart = () => {
-      console.log(" Speech recognition started")
       setIsRecording(true)
+      setIsPaused(false)
+      pausedRef.current = false
     }
 
     recognition.onresult = (event: any) => {
-      console.log(" Speech recognition result:", event.results[0][0].transcript)
-      const transcript = event.results[0][0].transcript
-      setInputValue(transcript)
-      setIsRecording(false)
-
-      if (audioStream) {
-        audioStream.getTracks().forEach((track) => track.stop())
-        setAudioStream(null)
+      let finalText = ""
+      let interimText = ""
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i]
+        if (res.isFinal) {
+          finalText += res[0].transcript
+        } else {
+          interimText += res[0].transcript
+        }
+      }
+      if (finalText) {
+        setInputValue(prev => (prev ? prev + " " : "") + finalText.trim())
+        setInterimTranscript("")
+      } else if (interimText) {
+        setInterimTranscript(interimText.trim())
       }
     }
 
@@ -333,9 +352,14 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
     }
 
     recognition.onend = () => {
-      console.log(" Speech recognition ended")
+      if (pausedRef.current) {
+        // Pausa: mantenemos stream y estado de isRecording
+        return
+      }
+      // Fin normal
       setIsRecording(false)
-
+      setIsPaused(false)
+      setInterimTranscript("")
       if (audioStream) {
         audioStream.getTracks().forEach((track) => track.stop())
         setAudioStream(null)
@@ -471,16 +495,24 @@ export function AIChat({ diagramId, onAIAction, onAIActions }: AIChatProps) {
                 className="pr-10"
                 disabled={isLoading}
               />
+              {isRecording && interimTranscript && (
+                <div className="absolute left-2 right-10 top-1/2 -translate-y-1/2 pointer-events-none text-xs text-gray-500 dark:text-gray-400 truncate">
+                  {interimTranscript}
+                </div>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
-                className={`absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 ${
-                  isRecording ? "text-red-500" : "text-gray-400"
+                className={`absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 transition-colors ${
+                  isRecording ? (isPaused ? "text-yellow-500" : "text-red-500") : "text-gray-400"
                 }`}
                 onClick={handleVoiceInput}
                 disabled={isLoading}
+                title={!isRecording ? "Iniciar dictado" : isPaused ? "Reanudar" : "Pausar"}
               >
-                {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                {!isRecording && <Mic className="w-4 h-4" />}
+                {isRecording && !isPaused && <Pause className="w-4 h-4" />}
+                {isRecording && isPaused && <Play className="w-4 h-4" />}
               </Button>
             </div>
             <Button onClick={handleSendMessage} disabled={!inputValue.trim() || isLoading}>
