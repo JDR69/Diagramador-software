@@ -16,6 +16,8 @@ interface DiagramCanvasProps {
   relationships: RelationshipData[]
   onClassesChange: (classes: ClassData[]) => void
   onRelationshipsChange: (relationships: RelationshipData[]) => void
+  isChatOpen: boolean
+  onToggleChat: () => void
 }
 
 export interface ClassData {
@@ -40,6 +42,8 @@ export function DiagramCanvas({
   relationships,
   onClassesChange,
   onRelationshipsChange,
+  isChatOpen,
+  onToggleChat,
 }: DiagramCanvasProps) {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [selectedClass, setSelectedClass] = React.useState<string | null>(null)
@@ -133,6 +137,8 @@ export function DiagramCanvas({
         onAddClass={handleAddClass}
         isConnecting={isConnecting}
         onToggleConnection={() => setIsConnecting(!isConnecting)}
+        isChatOpen={isChatOpen}
+        onToggleChat={onToggleChat}
       />
 
       <div

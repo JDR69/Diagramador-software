@@ -20,6 +20,7 @@ export default function DiagramPage() {
   const [userId] = useState(() => `user-${Math.random().toString(36).substring(2, 15)}`)
   const [userName] = useState(() => `Usuario ${Math.floor(Math.random() * 1000)}`)
   const [notFound, setNotFound] = useState(false)
+  const [isChatOpen, setIsChatOpen] = useState(true)
   const BACKEND_URL = BACKEND_API_BASE
 
   // Cargar diagrama desde el backend al montar
@@ -192,6 +193,10 @@ export default function DiagramPage() {
     handleRelationshipsChange(newRelationships)
   }
 
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen)
+  }
+
   if (notFound) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
@@ -222,11 +227,15 @@ export default function DiagramPage() {
             relationships={relationships}
             onClassesChange={handleClassesChange}
             onRelationshipsChange={handleRelationshipsChange}
+            isChatOpen={isChatOpen}
+            onToggleChat={toggleChat}
           />
         </div>
-        <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <AIChat diagramId={diagramId} onAIAction={handleAIAction} onAIActions={handleAIActions} />
-        </div>
+        {isChatOpen && (
+          <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <AIChat diagramId={diagramId} onAIAction={handleAIAction} onAIActions={handleAIActions} />
+          </div>
+        )}
       </div>
     </div>
   )
