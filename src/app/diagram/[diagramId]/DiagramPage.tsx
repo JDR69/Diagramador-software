@@ -169,15 +169,20 @@ export default function DiagramPage() {
       const fromId = nameToId.get(a.data.from)
       const toId = nameToId.get(a.data.to)
       if (!fromId || !toId) return
-      const exists = newRelationships.some(r => r.from === fromId && r.to === toId && r.type === (a.data.type || 'association'))
+      const relType = a.data.type || 'association'
+      const relName = a.data.name || 'relacion'
+      const card = a.data.cardinality && a.data.cardinality.from && a.data.cardinality.to
+        ? a.data.cardinality
+        : { from: '1', to: '1' }
+      const exists = newRelationships.some(r => r.from === fromId && r.to === toId && r.type === relType && (r.name || '') === relName)
       if (!exists) {
         newRelationships.push({
           id: `rel-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
           from: fromId,
           to: toId,
-            type: a.data.type || 'association',
-            cardinality: { from: '1', to: '1' },
-            name: 'relacion'
+            type: relType,
+            cardinality: card,
+            name: relName
         })
       }
     })

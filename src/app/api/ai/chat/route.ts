@@ -17,13 +17,13 @@ function generateFallbackDiagram(dominio: string) {
         { name: "Factura", attributes: ["id", "fecha", "monto", "estado", "metodoPago"] }
       ],
       relationships: [
-        { from: "Paciente", to: "Consulta", type: "association" },
-        { from: "Doctor", to: "Consulta", type: "association" },
-        { from: "Paciente", to: "HistorialMedico", type: "composition" },
-        { from: "Paciente", to: "Habitacion", type: "association" },
-        { from: "Doctor", to: "Departamento", type: "association" },
-        { from: "Enfermero", to: "Departamento", type: "association" },
-        { from: "Consulta", to: "Factura", type: "association" }
+        { from: "Paciente", to: "Consulta", type: "association", name: "consultas", cardinality: { from: "1", to: "*" } },
+        { from: "Doctor", to: "Consulta", type: "association", name: "atiende", cardinality: { from: "1", to: "*" } },
+        { from: "Paciente", to: "HistorialMedico", type: "composition", name: "historial", cardinality: { from: "1", to: "1" } },
+        { from: "Paciente", to: "Habitacion", type: "association", name: "alojadoEn", cardinality: { from: "0..1", to: "*" } },
+        { from: "Doctor", to: "Departamento", type: "aggregation", name: "perteneceA", cardinality: { from: "*", to: "1" } },
+        { from: "Enfermero", to: "Departamento", type: "aggregation", name: "adscritoA", cardinality: { from: "*", to: "1" } },
+        { from: "Consulta", to: "Factura", type: "association", name: "genera", cardinality: { from: "1", to: "0..1" } }
       ]
     },
     universidad: {
@@ -38,13 +38,13 @@ function generateFallbackDiagram(dominio: string) {
         { name: "Carrera", attributes: ["id", "nombre", "duracion", "creditos", "modalidad"] }
       ],
       relationships: [
-        { from: "Estudiante", to: "Inscripcion", type: "association" },
-        { from: "Curso", to: "Inscripcion", type: "association" },
-        { from: "Profesor", to: "Curso", type: "association" },
-        { from: "Estudiante", to: "Carrera", type: "association" },
-        { from: "Profesor", to: "Departamento", type: "association" },
-        { from: "Curso", to: "Horario", type: "association" },
-        { from: "Horario", to: "Aula", type: "association" }
+        { from: "Estudiante", to: "Inscripcion", type: "association", name: "inscripciones", cardinality: { from: "1", to: "*" } },
+        { from: "Curso", to: "Inscripcion", type: "association", name: "matriculas", cardinality: { from: "1", to: "*" } },
+        { from: "Profesor", to: "Curso", type: "association", name: "imparte", cardinality: { from: "1", to: "*" } },
+        { from: "Estudiante", to: "Carrera", type: "association", name: "cursa", cardinality: { from: "*", to: "1" } },
+        { from: "Profesor", to: "Departamento", type: "aggregation", name: "adscritoA", cardinality: { from: "*", to: "1" } },
+        { from: "Curso", to: "Horario", type: "composition", name: "horario", cardinality: { from: "1", to: "1..*" } },
+        { from: "Horario", to: "Aula", type: "association", name: "dictadoEn", cardinality: { from: "*", to: "1" } }
       ]
     }
   }
@@ -62,13 +62,13 @@ function generateFallbackDiagram(dominio: string) {
       { name: "Factura", attributes: ["id", "numero", "fecha", "impuestos"] }
     ],
     relationships: [
-      { from: "Usuario", to: "Pedido", type: "association" },
-      { from: "Pedido", to: "Producto", type: "association" },
-      { from: "Producto", to: "Categoria", type: "association" },
-      { from: "Usuario", to: "Direccion", type: "association" },
-      { from: "Pedido", to: "Pago", type: "association" },
-      { from: "Producto", to: "Inventario", type: "association" },
-      { from: "Pedido", to: "Factura", type: "association" }
+      { from: "Usuario", to: "Pedido", type: "association", name: "realiza", cardinality: { from: "1", to: "*" } },
+      { from: "Pedido", to: "Producto", type: "association", name: "incluye", cardinality: { from: "1", to: "*" } },
+      { from: "Producto", to: "Categoria", type: "association", name: "perteneceA", cardinality: { from: "*", to: "1" } },
+      { from: "Usuario", to: "Direccion", type: "aggregation", name: "tiene", cardinality: { from: "1", to: "1..*" } },
+      { from: "Pedido", to: "Pago", type: "association", name: "pago", cardinality: { from: "1", to: "1" } },
+      { from: "Producto", to: "Inventario", type: "composition", name: "stock", cardinality: { from: "1", to: "1" } },
+      { from: "Pedido", to: "Factura", type: "association", name: "factura", cardinality: { from: "1", to: "0..1" } }
     ]
   }
 
@@ -103,24 +103,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Nuevo: Generar diagrama de clases para cualquier dominio (regex más flexible)
-    const diagramaMatch = message.match(/crear(?:\s+un)?\s+diagrama\s+de\s+([a-zA-Z0-9áéíóúüñ ]+)/i)
+  const diagramaMatch = message.match(/crear(?:\s+un)?\s+diagrama\s+de\s+([a-zA-Z0-9áéíóúüñ ]+)/i)
     console.log("🔍 Checking diagram pattern:", diagramaMatch)
     if (diagramaMatch) {
       const dominio = diagramaMatch[1].trim()
       console.log("🎯 Detected domain:", dominio)
-      const prompt = `Crea un sistema de ${dominio} con 8 clases principales y sus relaciones. Responde ÚNICAMENTE con este JSON (sin explicaciones ni texto adicional):
-
+      const prompt = `Genera un diagrama de clases para un sistema de ${dominio} con ~8 clases.
+Responde SOLO JSON válido (sin comentarios ni texto extra) siguiendo exactamente este esquema:
 {
-  "classes": [
-    { "name": "Clase1", "attributes": ["id", "nombre", "estado"] },
-    { "name": "Clase2", "attributes": ["id", "descripcion"] }
-  ],
-  "relationships": [
-    { "from": "Clase1", "to": "Clase2", "type": "association" }
-  ]
+  "classes": [ { "name": "Nombre", "attributes": ["id", "campo1", "campo2"] } ],
+  "relationships": [ { "from": "ClaseA", "to": "ClaseB", "type": "association|aggregation|composition|inheritance", "name": "nombreRelacion", "cardinality": { "from": "1|0..1|*|1..*", "to": "1|0..1|*|1..*" } } ]
 }
-
-Usa nombres de clases relevantes para ${dominio} y atributos apropiados.`
+Reglas:
+- Variar "type" (usa varios distintos si tiene sentido).
+- Incluir cardinalidad coherente en ambos extremos.
+- El nombre de relación (name) en camelCase y semántico.
+- Atributos deben incluir siempre "id" y otros relevantes.
+Si alguna relación es jerárquica usa "inheritance" (solo si aplica).`
       
       console.log("🤖 Sending prompt to AI:", prompt)
       const { text } = await generateText({
@@ -155,7 +154,16 @@ Usa nombres de clases relevantes para ${dominio} y atributos apropiados.`
           }
         })
         diagram.relationships.forEach((rel: any) => {
-          actions.push({ type: "add_relationship", data: { from: rel.from, to: rel.to, type: rel.type || "association" } })
+          actions.push({ 
+            type: "add_relationship", 
+            data: { 
+              from: rel.from, 
+              to: rel.to, 
+              type: rel.type || "association",
+              cardinality: rel.cardinality || { from: "1", to: "1" },
+              name: rel.name || `${rel.from}_${rel.to}`
+            } 
+          })
         })
         console.log("🎯 Final actions array:", actions)
         return NextResponse.json({ response: `Diagrama de ${dominio} generado automáticamente.`, actions, diagram })
